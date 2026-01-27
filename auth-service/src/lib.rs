@@ -1,6 +1,6 @@
 use std::error::Error;
 
-use axum::{Router, serve::Serve};
+use axum::{serve::Serve, Router};
 use tokio::net::TcpListener;
 use tower_http::services::ServeDir;
 
@@ -18,10 +18,7 @@ impl Application {
         let address = listener.local_addr()?.to_string();
         let server = axum::serve(listener, router);
 
-        Ok(Self {
-            server,
-            address,
-        })
+        Ok(Self { server, address })
     }
 
     pub async fn run(self) -> Result<(), std::io::Error> {
