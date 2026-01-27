@@ -1,6 +1,6 @@
 use auth_service::Application;
 
-struct TestApp {
+pub struct TestApp {
     pub address: String,
     pub http_client: reqwest::Client,
 }
