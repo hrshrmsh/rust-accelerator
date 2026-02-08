@@ -39,12 +39,10 @@ async fn should_return_422_if_malformed_input() {
 async fn should_return_201_if_valid_input() {
     let app = TestApp::new().await;
 
-    let random_emails = &[TestApp::get_random_email(), TestApp::get_random_email()];
-
     let test_cases = [
         json! {
             {
-                "email": random_emails[0],
+                "email": "hello@world.com",
                 "password": "password123",
                 "requires2FA": true
             }
@@ -52,8 +50,8 @@ async fn should_return_201_if_valid_input() {
         json! {
             {
                 "requires2FA": true,
-                "password": "123456",
-                "email": random_emails[1]
+                "password": "12345678",
+                "email": "goodbye@world.com"
             }
         },
     ];
@@ -84,7 +82,7 @@ async fn should_return_400_if_invalid_input() {
             .post_signup(&json!({
                 "email": invalid_email,
                 "password": "validpassword",
-                "requires_2fa": true,
+                "requires2FA": true,
             }))
             .await;
 
@@ -99,7 +97,7 @@ async fn should_return_400_if_invalid_input() {
             .post_signup(&json!({
                 "email": "valid@email.com",
                 "password": invalid_password,
-                "requires_2fa": true,
+                "requires2FA": true,
             }))
             .await;
 
@@ -118,7 +116,7 @@ async fn should_return_409_if_email_already_exists() {
     let user = json!({
         "email": "hello@world.com",
         "password": "password123",
-        "requires_2fa": true,
+        "requires2FA": true,
     });
 
     app.post_signup(&user).await.error_for_status().unwrap();
@@ -127,6 +125,6 @@ async fn should_return_409_if_email_already_exists() {
     assert_eq!(response.status().as_u16(), 409);
     assert_eq!(
         response.json::<ErrorResponse>().await.unwrap().error,
-        "User already exists"
+        "User already exists!"
     );
 }

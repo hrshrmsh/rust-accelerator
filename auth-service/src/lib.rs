@@ -18,7 +18,7 @@ pub mod services;
 
 use app_state::AppState;
 
-use crate::domain::AuthAPIError;
+use crate::{domain::AuthAPIError, services::UserStoreError};
 
 pub struct Application {
     server: Serve<TcpListener, Router, Router>,
@@ -70,5 +70,15 @@ impl IntoResponse for AuthAPIError {
             error: error_message.to_string(),
         });
         (status, body).into_response()
+    }
+}
+
+impl From<UserStoreError> for AuthAPIError {
+    fn from(value: UserStoreError) -> Self {
+        match value {
+            UserStoreError::UserAlreadyExists => AuthAPIError::UserAlreadyExists,
+            UserStoreError::InvalidCredentials => AuthAPIError::InvalidCredentials,
+            _ => AuthAPIError::UnexpectedError,
+        }
     }
 }
