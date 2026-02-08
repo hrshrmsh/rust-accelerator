@@ -1,10 +1,15 @@
-use std::error::Error;
+use std::{error::Error, sync::Arc};
 
 use axum::{routing::post, serve::Serve, Router};
 use tokio::net::TcpListener;
 use tower_http::services::{ServeDir, ServeFile};
 
+pub mod app_state;
+pub mod domain;
 pub mod routes;
+pub mod services;
+
+use app_state::AppState;
 
 pub struct Application {
     server: Serve<TcpListener, Router, Router>,
@@ -12,16 +17,18 @@ pub struct Application {
 }
 
 impl Application {
-    pub async fn build(address: &str) -> Result<Self, Box<dyn Error>> {
+    pub async fn build(app_state: AppState, address: &str) -> Result<Self, Box<dyn Error>> {
         let assets_dir =
             ServeDir::new("assets").not_found_service(ServeFile::new("assets/index.html"));
+        
         let router = Router::new()
             .fallback_service(assets_dir)
             .route("/signup", post(routes::signup))
             .route("/login", post(routes::login))
             .route("/logout", post(routes::logout))
             .route("/verify-2fa", post(routes::verify_2fa))
-            .route("/verify-token", post(routes::verify_token));
+            .route("/verify-token", post(routes::verify_token))
+            .with_state(Arc::new(app_state));
 
         let listener = TcpListener::bind(address).await?;
         let address = listener.local_addr()?.to_string();

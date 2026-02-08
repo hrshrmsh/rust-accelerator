@@ -1,4 +1,7 @@
-use auth_service::Application;
+use std::sync::Arc;
+
+use auth_service::{Application, app_state::AppState, services::HashmapUserStore};
+use tokio::sync::RwLock;
 use uuid::Uuid;
 
 pub struct TestApp {
@@ -8,7 +11,10 @@ pub struct TestApp {
 
 impl TestApp {
     pub async fn new() -> Self {
-        let app = Application::build("127.0.0.1:0")
+        let user_store = HashmapUserStore::default();
+        let app_state = AppState::new(Arc::new(RwLock::new(user_store)));
+
+        let app = Application::build(app_state, "127.0.0.1:0")
             .await
             .expect("could not build application");
         let address = format!("http://{}", &app.address);
@@ -30,14 +36,16 @@ impl TestApp {
     }
 
     #[inline]
-    pub async fn post_signup<Body>(&self, body: &Body) -> reqwest::Response 
-    where Body: serde::Serialize
+    pub async fn post_signup<Body>(&self, body: &Body) -> reqwest::Response
+    where
+        Body: serde::Serialize,
     {
-        self.http_client.post(&format!("{}/signup", self.address))
-        .json(body)
-        .send()
-        .await
-        .expect("failed to execute request")
+        self.http_client
+            .post(&format!("{}/signup", self.address))
+            .json(body)
+            .send()
+            .await
+            .expect("failed to execute request")
     }
 
     #[inline]
