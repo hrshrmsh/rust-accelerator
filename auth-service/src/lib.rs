@@ -20,7 +20,7 @@ impl Application {
     pub async fn build(app_state: AppState, address: &str) -> Result<Self, Box<dyn Error>> {
         let assets_dir =
             ServeDir::new("assets").not_found_service(ServeFile::new("assets/index.html"));
-        
+
         let router = Router::new()
             .fallback_service(assets_dir)
             .route("/signup", post(routes::signup))

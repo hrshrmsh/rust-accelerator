@@ -1,13 +1,13 @@
 use std::sync::Arc;
 
-use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
+use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use serde::{Deserialize, Serialize};
 
 use crate::{app_state::AppState, domain::User};
 
 pub async fn signup(
     State(state): State<Arc<AppState>>,
-    Json(request): Json<SignupRequest>
+    Json(request): Json<SignupRequest>,
 ) -> impl IntoResponse {
     let user = User::new(request.email, request.password, request.requires_2fa);
 
@@ -15,7 +15,7 @@ pub async fn signup(
     user_store.add_user(user).expect("failed to add user!");
 
     let response = Json(SignupResponse {
-        message: String::from("User created successfully!")
+        message: String::from("User created successfully!"),
     });
 
     (StatusCode::CREATED, response)

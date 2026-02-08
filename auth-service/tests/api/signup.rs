@@ -61,11 +61,14 @@ async fn should_return_201_if_valid_input() {
     for test_case in &test_cases {
         let response = app.post_signup(&test_case).await;
         let expected_response = SignupResponse {
-            message: String::from("User created successfully!")
+            message: String::from("User created successfully!"),
         };
 
         assert_eq!(response.status().as_u16(), 201);
-        assert_eq!(response.json::<SignupResponse>().await.unwrap(), expected_response)
+        assert_eq!(
+            response.json::<SignupResponse>().await.unwrap(),
+            expected_response
+        )
     }
 }
 
@@ -77,20 +80,24 @@ async fn should_return_400_if_invalid_input() {
     let invalid_passwords = &["", "1234567", "passwor"];
 
     for invalid_email in invalid_emails {
-        let response = app.post_signup(& json!({
-            "email": invalid_email,
-            "password": "validpassword",
-            "requires_2fa": true,
-        })).await;
+        let response = app
+            .post_signup(&json!({
+                "email": invalid_email,
+                "password": "validpassword",
+                "requires_2fa": true,
+            }))
+            .await;
 
         assert_eq!(response.status().as_u16(), 400);
     }
     for invalid_password in invalid_passwords {
-        let response = app.post_signup(& json!({
-            "email": "valid@email.com",
-            "password": invalid_password,
-            "requires_2fa": true,
-        })).await;
+        let response = app
+            .post_signup(&json!({
+                "email": "valid@email.com",
+                "password": invalid_password,
+                "requires_2fa": true,
+            }))
+            .await;
 
         assert_eq!(response.status().as_u16(), 400);
     }
@@ -99,7 +106,7 @@ async fn should_return_400_if_invalid_input() {
 #[tokio::test]
 async fn should_return_409_if_email_already_exists() {
     let app = TestApp::new().await;
-    // Call the signup route twice. The second request should fail with a 409 HTTP status code    
+    // Call the signup route twice. The second request should fail with a 409 HTTP status code
     let user = json!({
         "email": "hello@world.com",
         "password": "password123",
