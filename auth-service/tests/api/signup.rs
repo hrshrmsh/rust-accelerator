@@ -68,3 +68,44 @@ async fn should_return_201_if_valid_input() {
         assert_eq!(response.json::<SignupResponse>().await.unwrap(), expected_response)
     }
 }
+
+#[tokio::test]
+async fn should_return_400_if_invalid_input() {
+    let app = TestApp::new().await;
+
+    let invalid_emails = &["", "don't have amerspand", "longstring12345?"];
+    let invalid_passwords = &["", "1234567", "passwor"];
+
+    for invalid_email in invalid_emails {
+        let response = app.post_signup(& json!({
+            "email": invalid_email,
+            "password": "validpassword",
+            "requires_2fa": true,
+        })).await;
+
+        assert_eq!(response.status().as_u16(), 400);
+    }
+    for invalid_password in invalid_passwords {
+        let response = app.post_signup(& json!({
+            "email": "valid@email.com",
+            "password": invalid_password,
+            "requires_2fa": true,
+        })).await;
+
+        assert_eq!(response.status().as_u16(), 400);
+    }
+}
+
+#[tokio::test]
+async fn should_return_409_if_email_already_exists() {
+    let app = TestApp::new().await;
+    // Call the signup route twice. The second request should fail with a 409 HTTP status code    
+    let user = json!({
+        "email": "hello@world.com",
+        "password": "password123",
+        "requires_2fa": true,
+    });
+
+    app.post_signup(&user).await.error_for_status().unwrap();
+    assert_eq!(app.post_signup(&user).await.status().as_u16(), 409)
+}
