@@ -5,11 +5,12 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     app_state::AppState,
-    domain::{AuthAPIError, User},
+    domain::{AuthAPIError, User, UserStore},
+    services::HashmapUserStore,
 };
 
 pub async fn signup(
-    State(state): State<Arc<AppState>>,
+    State(state): State<Arc<AppState<HashmapUserStore>>>,
     Json(request): Json<SignupRequest>,
 ) -> Result<impl IntoResponse, AuthAPIError> {
     let email = request.email;
@@ -22,7 +23,7 @@ pub async fn signup(
     let user = User::new(email, password, request.requires_2fa);
 
     let mut user_store = state.user_store.write().await;
-    user_store.add_user(user)?;
+    user_store.add_user(user).await?;
 
     let response = Json(SignupResponse {
         message: String::from("User created successfully!"),

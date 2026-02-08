@@ -18,7 +18,10 @@ pub mod services;
 
 use app_state::AppState;
 
-use crate::{domain::AuthAPIError, services::UserStoreError};
+use crate::{
+    domain::{AuthAPIError, UserStoreError},
+    services::HashmapUserStore,
+};
 
 pub struct Application {
     server: Serve<TcpListener, Router, Router>,
@@ -26,7 +29,10 @@ pub struct Application {
 }
 
 impl Application {
-    pub async fn build(app_state: AppState, address: &str) -> Result<Self, Box<dyn Error>> {
+    pub async fn build(
+        app_state: AppState<HashmapUserStore>,
+        address: &str,
+    ) -> Result<Self, Box<dyn Error>> {
         let assets_dir =
             ServeDir::new("assets").not_found_service(ServeFile::new("assets/index.html"));
 
