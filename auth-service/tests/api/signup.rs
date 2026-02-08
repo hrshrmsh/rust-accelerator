@@ -1,6 +1,6 @@
 use crate::helpers::TestApp;
 
-use auth_service::routes::SignupResponse;
+use auth_service::{routes::SignupResponse, ErrorResponse};
 use serde_json::json;
 
 #[tokio::test]
@@ -89,6 +89,10 @@ async fn should_return_400_if_invalid_input() {
             .await;
 
         assert_eq!(response.status().as_u16(), 400);
+        assert_eq!(
+            response.json::<ErrorResponse>().await.unwrap().error,
+            "Invalid credentials!"
+        );
     }
     for invalid_password in invalid_passwords {
         let response = app
@@ -100,6 +104,10 @@ async fn should_return_400_if_invalid_input() {
             .await;
 
         assert_eq!(response.status().as_u16(), 400);
+        assert_eq!(
+            response.json::<ErrorResponse>().await.unwrap().error,
+            "Invalid credentials!"
+        );
     }
 }
 
@@ -114,5 +122,11 @@ async fn should_return_409_if_email_already_exists() {
     });
 
     app.post_signup(&user).await.error_for_status().unwrap();
-    assert_eq!(app.post_signup(&user).await.status().as_u16(), 409)
+
+    let response = app.post_signup(&user).await;
+    assert_eq!(response.status().as_u16(), 409);
+    assert_eq!(
+        response.json::<ErrorResponse>().await.unwrap().error,
+        "User already exists"
+    );
 }
