@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use validator::{Validate, ValidateLength, ValidateRange, ValidationError, ValidationErrors};
+use validator::{Validate, ValidateRange, ValidationError, ValidationErrors};
 
 use crate::domain::AuthAPIError;
 
