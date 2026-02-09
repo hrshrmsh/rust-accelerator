@@ -27,7 +27,11 @@ impl UserStore for HashmapUserStore {
             .ok_or_else(|| UserStoreError::UserNotFound)
     }
 
-    async fn validate_user(&self, email: &Email, password: &Password) -> Result<(), UserStoreError> {
+    async fn validate_user(
+        &self,
+        email: &Email,
+        password: &Password,
+    ) -> Result<(), UserStoreError> {
         let user = self.get_user(email).await?;
         if user.password != *password {
             Err(UserStoreError::InvalidCredentials)
@@ -72,7 +76,10 @@ mod tests {
         store.add_user(user1.clone()).await.unwrap();
 
         assert_eq!(Ok(user1), store.get_user(&"a@b.com".parse().unwrap()).await);
-        assert_eq!(Err(UserStoreError::UserNotFound), store.get_user(&"b@a.com".parse().unwrap()).await);
+        assert_eq!(
+            Err(UserStoreError::UserNotFound),
+            store.get_user(&"b@a.com".parse().unwrap()).await
+        );
     }
 
     #[tokio::test]
@@ -93,7 +100,9 @@ mod tests {
         );
         assert_eq!(
             Err(UserStoreError::InvalidCredentials),
-            store.validate_user(&user1.email, &"wrong password".parse().unwrap()).await
+            store
+                .validate_user(&user1.email, &"wrong password".parse().unwrap())
+                .await
         )
     }
 }
