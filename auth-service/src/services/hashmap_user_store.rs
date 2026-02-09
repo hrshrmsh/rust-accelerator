@@ -2,11 +2,11 @@ use std::collections::HashMap;
 
 use async_trait::async_trait;
 
-use crate::domain::{User, UserStore, UserStoreError};
+use crate::domain::{Email, Password, User, UserStore, UserStoreError};
 
 #[derive(Default)]
 pub struct HashmapUserStore {
-    users: HashMap<String, User>,
+    users: HashMap<Email, User>,
 }
 
 #[async_trait]
@@ -20,16 +20,16 @@ impl UserStore for HashmapUserStore {
         }
     }
 
-    async fn get_user(&self, email: &str) -> Result<User, UserStoreError> {
+    async fn get_user(&self, email: &Email) -> Result<User, UserStoreError> {
         self.users
             .get(email)
             .map(|u| u.clone())
             .ok_or_else(|| UserStoreError::UserNotFound)
     }
 
-    async fn validate_user(&self, email: &str, password: &str) -> Result<(), UserStoreError> {
+    async fn validate_user(&self, email: &Email, password: &Password) -> Result<(), UserStoreError> {
         let user = self.get_user(email).await?;
-        if user.password != password {
+        if user.password != *password {
             Err(UserStoreError::InvalidCredentials)
         } else {
             Ok(())
@@ -47,8 +47,8 @@ mod tests {
             ..Default::default()
         };
         let user1 = User {
-            email: String::from("a@b.com"),
-            password: String::from("password"),
+            email: "a@b.com".parse().unwrap(),
+            password: "password".parse().unwrap(),
             requires_2fa: true,
         };
 
@@ -65,14 +65,14 @@ mod tests {
             ..Default::default()
         };
         let user1 = User {
-            email: String::from("a@b.com"),
-            password: String::from("password"),
+            email: "a@b.com".parse().unwrap(),
+            password: "password".parse().unwrap(),
             requires_2fa: true,
         };
         store.add_user(user1.clone()).await.unwrap();
 
-        assert_eq!(Ok(user1), store.get_user("a@b.com").await);
-        assert_eq!(Err(UserStoreError::UserNotFound), store.get_user("?").await);
+        assert_eq!(Ok(user1), store.get_user(&"a@b.com".parse().unwrap()).await);
+        assert_eq!(Err(UserStoreError::UserNotFound), store.get_user(&"b@a.com".parse().unwrap()).await);
     }
 
     #[tokio::test]
@@ -81,8 +81,8 @@ mod tests {
             ..Default::default()
         };
         let user1 = User {
-            email: String::from("a@b.com"),
-            password: String::from("password"),
+            email: "a@b.com".parse().unwrap(),
+            password: "password".parse().unwrap(),
             requires_2fa: true,
         };
         store.add_user(user1.clone()).await.unwrap();
@@ -93,7 +93,7 @@ mod tests {
         );
         assert_eq!(
             Err(UserStoreError::InvalidCredentials),
-            store.validate_user(&user1.email, "wrong password").await
+            store.validate_user(&user1.email, &"wrong password".parse().unwrap()).await
         )
     }
 }

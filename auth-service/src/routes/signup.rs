@@ -20,7 +20,7 @@ pub async fn signup(
         return Err(AuthAPIError::InvalidCredentials);
     }
 
-    let user = User::new(email, password, request.requires_2fa);
+    let user = User::new(email.parse()?, password.parse()?, request.requires_2fa);
 
     let mut user_store = state.user_store.write().await;
     user_store.add_user(user).await?;

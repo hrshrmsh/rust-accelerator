@@ -1,10 +1,11 @@
 use std::str::FromStr;
 
+use serde::{Deserialize, Serialize};
 use validator::{Validate, ValidateRange, ValidationError, ValidationErrors};
 
 use crate::domain::AuthAPIError;
 
-#[derive(Debug)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Password(String);
 
 impl FromStr for Password {

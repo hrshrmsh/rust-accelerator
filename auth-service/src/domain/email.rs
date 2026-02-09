@@ -1,10 +1,11 @@
 use std::str::FromStr;
 
+use serde::{Deserialize, Serialize};
 use validator::{Validate, ValidateEmail, ValidationError, ValidationErrors};
 
 use crate::domain::AuthAPIError;
 
-#[derive(Debug)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Email(String);
 
 impl FromStr for Email {
