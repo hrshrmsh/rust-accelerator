@@ -1,16 +1,13 @@
-use std::sync::Arc;
-
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    app_state::AppState,
     domain::{AuthAPIError, User, UserStore},
-    services::HashmapUserStore,
+    UserState,
 };
 
 pub async fn signup(
-    State(state): State<Arc<AppState<HashmapUserStore>>>,
+    State(state): UserState,
     Json(request): Json<SignupRequest>,
 ) -> Result<impl IntoResponse, AuthAPIError> {
     let email = request.email;

@@ -35,9 +35,9 @@ async fn should_return_422_if_malformed_credentials() {
         }),
         json!({
             "email": "amazing@cool.com"
-        })
+        }),
     ];
-    
+
     for test_case in &test_cases {
         let response = app.post_login(test_case).await;
 

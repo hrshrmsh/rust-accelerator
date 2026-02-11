@@ -1,6 +1,6 @@
 use std::{error::Error, sync::Arc};
 
-use axum::{routing::post, serve::Serve, Router};
+use axum::{extract::State, routing::post, serve::Serve, Router};
 use serde::{Deserialize, Serialize};
 use tokio::net::TcpListener;
 use tower_http::services::{ServeDir, ServeFile};
@@ -53,3 +53,5 @@ impl Application {
 pub struct ErrorResponse {
     pub error: String,
 }
+
+pub type UserState = State<Arc<AppState<HashmapUserStore>>>;
