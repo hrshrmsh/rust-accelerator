@@ -1,19 +1,13 @@
 use serde_json::json;
 
+use auth_service::{ErrorResponse};
+
 use crate::helpers::TestApp;
 
 #[tokio::test]
 async fn login_returns_ok() {
     let app = TestApp::new().await;
-
-    app.post_signup(&json!({
-        "email": "azure@diamond.com",
-        "password": "hunter22",
-        "requires2FA": false
-    }))
-    .await
-    .error_for_status()
-    .unwrap();
+    setup_users(&app).await;
 
     let response = app
         .post_login(&json!({
@@ -47,5 +41,63 @@ async fn should_return_422_if_malformed_credentials() {
             "Failed for input: {:?}",
             test_case
         );
+    }
+}
+
+#[tokio::test]
+async fn should_return_400_if_invalid_input() {
+    let app = TestApp::new().await;
+
+    let invalid_emails = ["", "don't have amerspand", "longstring12345?"];
+    let invalid_passwords = ["", "1234567", "passwor"];
+
+    for invalid_email in invalid_emails {
+        let response = app.post_login(
+            &json!({
+                "email": invalid_email,
+                "password": "validpassword",
+            })
+        ).await;
+
+        assert_eq!(response.status().as_u16(), 400);
+        assert_eq!(
+            response.json::<ErrorResponse>().await.unwrap().error,
+            "Invalid credentials!"
+        );
+    }
+
+    for invalid_password in invalid_passwords {
+        let response = app.post_login(
+            &json!({
+                "email": "totally@valid.com",
+                "password": invalid_password,
+            })
+        ).await;
+
+        assert_eq!(response.status().as_u16(), 400);
+        assert_eq!(
+            response.json::<ErrorResponse>().await.unwrap().error,
+            "Invalid credentials!"
+        );
+    }
+
+}
+
+// helper database
+async fn setup_users(app: &TestApp) {
+
+    let users = [
+        json!({
+            "email": "azure@diamond.com",
+            "password": "hunter22",
+            "requires2FA": false
+        }),
+    ];
+    
+    for user in &users {
+        app.post_signup(user)
+            .await
+            .error_for_status()
+            .unwrap();
     }
 }
