@@ -1,7 +1,9 @@
 services:
   app-service:
+    restart: no
     build:
       context: ./app-service # specify directory where local Dockerfile is located
   auth-service:
+    restart: no
     build:
       context: ./auth-service # specify directory where local Dockerfile is located

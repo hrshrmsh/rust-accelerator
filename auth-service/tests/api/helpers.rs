@@ -49,22 +49,30 @@ impl TestApp {
     }
 
     #[inline]
-    pub async fn get_login(&self) -> reqwest::Response {
-        self.post("/login").await
+    pub async fn post_login<Body>(&self, body: &Body) -> reqwest::Response 
+    where
+        Body: serde::Serialize,
+    {
+        self.http_client
+            .post(&format!("{}/login", self.address))
+            .json(body)
+            .send()
+            .await
+            .expect("failed to execute request")
     }
 
     #[inline]
-    pub async fn get_logout(&self) -> reqwest::Response {
+    pub async fn post_logout(&self) -> reqwest::Response {
         self.post("/logout").await
     }
 
     #[inline]
-    pub async fn get_verify_2fa(&self) -> reqwest::Response {
+    pub async fn post_verify_2fa(&self) -> reqwest::Response {
         self.post("/verify-2fa").await
     }
 
     #[inline]
-    pub async fn get_verify_token(&self) -> reqwest::Response {
+    pub async fn post_verify_token(&self) -> reqwest::Response {
         self.post("/verify-token").await
     }
 
