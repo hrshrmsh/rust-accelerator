@@ -1,6 +1,6 @@
 use serde_json::json;
 
-use auth_service::{ErrorResponse};
+use auth_service::ErrorResponse;
 
 use crate::helpers::TestApp;
 
@@ -52,12 +52,12 @@ async fn should_return_400_if_invalid_input() {
     let invalid_passwords = ["", "1234567", "passwor"];
 
     for invalid_email in invalid_emails {
-        let response = app.post_login(
-            &json!({
+        let response = app
+            .post_login(&json!({
                 "email": invalid_email,
                 "password": "validpassword",
-            })
-        ).await;
+            }))
+            .await;
 
         assert_eq!(response.status().as_u16(), 400);
         assert_eq!(
@@ -67,12 +67,12 @@ async fn should_return_400_if_invalid_input() {
     }
 
     for invalid_password in invalid_passwords {
-        let response = app.post_login(
-            &json!({
+        let response = app
+            .post_login(&json!({
                 "email": "totally@valid.com",
                 "password": invalid_password,
-            })
-        ).await;
+            }))
+            .await;
 
         assert_eq!(response.status().as_u16(), 400);
         assert_eq!(
@@ -80,24 +80,56 @@ async fn should_return_400_if_invalid_input() {
             "Invalid credentials!"
         );
     }
+}
 
+#[tokio::test]
+async fn should_return_401_if_incorrect_credentials() {
+    let app = TestApp::new().await;
+    setup_users(&app).await;
+
+    let response = app
+        .post_login(&json!({
+            "email": "azure@diamond.com",
+            "password": "wrongpassword"
+        }))
+        .await;
+
+    assert_eq!(response.status().as_u16(), 401);
+    assert_eq!(
+        response.json::<ErrorResponse>().await.unwrap().error,
+        "Authentication failed!"
+    );
+
+    let response = app
+        .post_login(&json!({
+            "email": "azure2@diamond.com",
+            "password": "hunter22"
+        }))
+        .await;
+
+    assert_eq!(response.status().as_u16(), 401);
+    assert_eq!(
+        response.json::<ErrorResponse>().await.unwrap().error,
+        "Authentication failed!"
+    );
 }
 
 // helper database
 async fn setup_users(app: &TestApp) {
-
     let users = [
         json!({
             "email": "azure@diamond.com",
             "password": "hunter22",
             "requires2FA": false
         }),
+        json!({
+            "email": "cthon98@bash.org",
+            "password": "7!superdupersecure!7",
+            "requires2FA": false
+        }),
     ];
-    
+
     for user in &users {
-        app.post_signup(user)
-            .await
-            .error_for_status()
-            .unwrap();
+        app.post_signup(user).await.error_for_status().unwrap();
     }
 }

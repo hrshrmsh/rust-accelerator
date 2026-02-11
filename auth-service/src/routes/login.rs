@@ -2,7 +2,7 @@ use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use serde::Deserialize;
 
 use crate::{
-    domain::{AuthAPIError, Email, Password},
+    domain::{AuthAPIError, Email, Password, UserStore},
     UserState,
 };
 
@@ -13,7 +13,12 @@ pub async fn login(
     let email: Email = request.email.parse()?;
     let password: Password = request.password.parse()?;
 
-    // TODO: add logic
+    state
+        .user_store
+        .read()
+        .await
+        .validate_user(&email, &password)
+        .await?;
 
     Ok(StatusCode::OK.into_response())
 }
