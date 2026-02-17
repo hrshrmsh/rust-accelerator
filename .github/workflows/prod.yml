@@ -34,6 +34,7 @@ jobs:
     - name: Build and test app-service code
       working-directory: ./app-service
       run: |
+        export JWT_SECRET=secret
         cargo build --verbose
         cargo test --verbose
 
@@ -90,6 +91,7 @@ jobs:
         script: |
           cd ~
           docker login -u $DOCKER_USERNAME -p $DOCKERHUB_TOKEN
+          export JWT_SECRET=${{ secrets.JWT_SECRET }}
           export AUTH_SERVICE_IP=${{ vars.DROPLET_IP }}
           docker compose down
           docker compose pull

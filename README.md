@@ -28,8 +28,13 @@ visit http://localhost:3000
 
 ## Run servers locally (Docker)
 ```bash
-docker compose build
-docker compose up
+./docker.sh
+```
+
+## Run servers locally (Docker)
+```bash
+docker compose --env-file auth-service\.env build
+docker compose --env-file auth-service\.env up
 ```
 
 visit http://localhost:8000 and http://localhost:3000
