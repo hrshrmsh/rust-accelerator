@@ -1,11 +1,11 @@
 use serde_json::json;
 
-use auth_service::ErrorResponse;
+use auth_service::{ErrorResponse, utils::constants::JWT_COOKIE_NAME};
 
 use crate::helpers::TestApp;
 
 #[tokio::test]
-async fn login_returns_ok() {
+async fn should_return_200_if_valid_credentials_and_2fa_disabled() {
     let app = TestApp::new().await;
     setup_users(&app).await;
 
@@ -17,6 +17,13 @@ async fn login_returns_ok() {
         .await;
 
     assert_eq!(response.status().as_u16(), 200);
+
+    let auth_cookie = response
+        .cookies()
+        .find(|cookie| cookie.name() == JWT_COOKIE_NAME)
+        .expect("no cookie found");
+
+    assert!(!auth_cookie.value().is_empty());
 }
 
 #[tokio::test]

@@ -1,6 +1,6 @@
 use crate::helpers::TestApp;
 
-use auth_service::{routes::SignupResponse, ErrorResponse};
+use auth_service::{ErrorResponse, routes::SignupResponse};
 use serde_json::json;
 
 #[tokio::test]

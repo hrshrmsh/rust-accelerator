@@ -44,9 +44,9 @@ mod tests {
 
     use super::*;
 
-    use fake::{faker::internet::en::SafeEmail, Fake};
+    use fake::{Fake, faker::internet::en::SafeEmail};
     use quickcheck_macros::quickcheck;
-    use rand::{rngs::SmallRng, SeedableRng};
+    use rand::{SeedableRng, rngs::SmallRng};
 
     #[derive(Debug, Clone)]
     struct ValidArbitraryEmail(String);

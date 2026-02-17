@@ -1,12 +1,12 @@
 use axum::{
+    Json,
     http::StatusCode,
     response::{IntoResponse, Response},
-    Json,
 };
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::{domain::UserStoreError, ErrorResponse};
+use crate::{ErrorResponse, domain::UserStoreError};
 
 #[derive(Error, Debug, Serialize, Deserialize)]
 pub enum AuthAPIError {

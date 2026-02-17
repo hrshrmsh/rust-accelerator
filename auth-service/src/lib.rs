@@ -1,6 +1,6 @@
 use std::{error::Error, sync::Arc};
 
-use axum::{extract::State, routing::post, serve::Serve, Router};
+use axum::{Router, extract::State, routing::post, serve::Serve};
 use serde::{Deserialize, Serialize};
 use tokio::net::TcpListener;
 use tower_http::services::{ServeDir, ServeFile};

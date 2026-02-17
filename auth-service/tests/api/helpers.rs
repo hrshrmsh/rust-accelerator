@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use auth_service::{app_state::AppState, services::HashmapUserStore, Application};
+use auth_service::{Application, app_state::AppState, services::HashmapUserStore};
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
