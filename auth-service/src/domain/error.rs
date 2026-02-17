@@ -6,7 +6,7 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::{ErrorResponse, domain::UserStoreError};
+use crate::{ErrorResponse, domain::UserStoreError, utils::auth::GenerateTokenError};
 
 #[derive(Error, Debug, Serialize, Deserialize)]
 pub enum AuthAPIError {
@@ -42,7 +42,13 @@ impl From<UserStoreError> for AuthAPIError {
             UserStoreError::InvalidCredentials | UserStoreError::UserNotFound => {
                 Self::AuthenticationError
             }
-            _ => AuthAPIError::UnexpectedError,
+            _ => Self::UnexpectedError,
         }
+    }
+}
+
+impl From<GenerateTokenError> for AuthAPIError {
+    fn from(_: GenerateTokenError) -> Self {
+        Self::UnexpectedError
     }
 }

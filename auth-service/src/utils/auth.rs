@@ -1,0 +1,136 @@
+use axum_extra::extract::cookie::{Cookie, SameSite};
+use chrono::{Duration, Utc};
+use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
+use serde::{Deserialize, Serialize};
+use thiserror::Error;
+
+use crate::{
+    domain::Email,
+    utils::constants::{JWT_COOKIE_NAME, JWT_SECRET},
+};
+
+pub fn generate_auth_cookie(email: &Email) -> Result<Cookie<'static>, GenerateTokenError> {
+    let token = generate_auth_token(email)?;
+    Ok(create_auth_cookie(token))
+}
+
+fn create_auth_cookie(token: String) -> Cookie<'static> {
+    Cookie::build((JWT_COOKIE_NAME, token))
+        .path("/")
+        .http_only(true)
+        .same_site(SameSite::Lax)
+        .build()
+}
+
+#[derive(Debug, Error)]
+pub enum GenerateTokenError {
+    #[error("{0}")]
+    TokenError(#[from] jsonwebtoken::errors::Error),
+    #[error("unexpected error")]
+    UnexpectedError,
+}
+
+// 10 min
+pub const TOKEN_TTL_SECONDS: i64 = 600;
+
+fn generate_auth_token(email: &Email) -> Result<String, GenerateTokenError> {
+    let delta =
+        Duration::try_seconds(TOKEN_TTL_SECONDS).ok_or(GenerateTokenError::UnexpectedError)?;
+
+    let expiration: usize = Utc::now()
+        .checked_add_signed(delta)
+        .ok_or(GenerateTokenError::UnexpectedError)?
+        .timestamp()
+        .try_into()
+        .map_err(|_| GenerateTokenError::UnexpectedError)?;
+
+    let claims = Claims {
+        sub: email.as_ref().to_string(),
+        exp: expiration,
+    };
+
+    create_token(&claims)
+}
+
+pub async fn validate_token(token: &str) -> Result<Claims, GenerateTokenError> {
+    Ok(decode::<Claims>(
+        token,
+        &DecodingKey::from_secret(JWT_SECRET.as_bytes()),
+        &Validation::default(),
+    )
+    .map(|data| data.claims)?)
+}
+
+fn create_token(claims: &Claims) -> Result<String, GenerateTokenError> {
+    Ok(encode(
+        &Header::default(),
+        &claims,
+        &EncodingKey::from_secret(JWT_SECRET.as_bytes()),
+    )?)
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Claims {
+    pub sub: String,
+    pub exp: usize,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_generate_auth_cookie() {
+        let email: Email = "test@example.com".parse().unwrap();
+        let cookie = generate_auth_cookie(&email).unwrap();
+
+        assert_eq!(cookie.name(), JWT_COOKIE_NAME);
+        assert_eq!(cookie.value().split('.').count(), 3);
+        assert_eq!(cookie.path(), Some("/"));
+        assert_eq!(cookie.http_only(), Some(true));
+        assert_eq!(cookie.same_site(), Some(SameSite::Lax));
+    }
+
+    #[tokio::test]
+    async fn test_create_auth_cookie() {
+        let token = "test_token".to_string();
+        let cookie = create_auth_cookie(token.clone());
+
+        assert_eq!(cookie.name(), JWT_COOKIE_NAME);
+        assert_eq!(cookie.value(), token);
+        assert_eq!(cookie.path(), Some("/"));
+        assert_eq!(cookie.http_only(), Some(true));
+        assert_eq!(cookie.same_site(), Some(SameSite::Lax));
+    }
+
+    #[tokio::test]
+    async fn test_generate_auth_token() {
+        let email: Email = "test@example.com".parse().unwrap();
+        let result = generate_auth_token(&email).unwrap();
+
+        assert_eq!(result.split('.').count(), 3);
+    }
+
+    #[tokio::test]
+    async fn test_validate_token_with_valid_token() {
+        let email: Email = "test@example.com".parse().unwrap();
+        let token = generate_auth_token(&email).unwrap();
+        let result = validate_token(&token).await.unwrap();
+        assert_eq!(result.sub, "test@example.com");
+
+        let exp = Utc::now()
+            .checked_add_signed(chrono::Duration::try_minutes(9).expect("valid duration"))
+            .expect("valid timestamp")
+            .timestamp();
+
+        assert!(result.exp > exp as usize);
+    }
+
+    #[tokio::test]
+    async fn test_validate_token_with_invalid_token() {
+        let token = "invalid_token".to_string();
+        let result = validate_token(&token).await;
+
+        assert!(result.is_err());
+    }
+}
