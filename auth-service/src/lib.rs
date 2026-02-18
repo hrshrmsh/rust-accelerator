@@ -1,6 +1,6 @@
-use std::{error::Error, sync::Arc};
+use std::error::Error;
 
-use axum::{Router, extract::State, http::Method, routing::post, serve::Serve};
+use axum::{Router, http::Method, routing::post, serve::Serve};
 use serde::{Deserialize, Serialize};
 use tokio::net::TcpListener;
 use tower_http::{
@@ -16,7 +16,7 @@ pub mod utils;
 
 use app_state::AppState;
 
-use crate::{services::HashmapUserStore, utils::constants::DROPLET_IP};
+use crate::utils::constants::DROPLET_IP;
 
 pub struct Application {
     server: Serve<TcpListener, Router, Router>,
@@ -24,10 +24,7 @@ pub struct Application {
 }
 
 impl Application {
-    pub async fn build(
-        app_state: AppState<HashmapUserStore>,
-        address: &str,
-    ) -> Result<Self, Box<dyn Error>> {
+    pub async fn build(app_state: AppState, address: &str) -> Result<Self, Box<dyn Error>> {
         let assets_dir =
             ServeDir::new("assets").not_found_service(ServeFile::new("assets/index.html"));
 
@@ -48,7 +45,7 @@ impl Application {
             .route("/logout", post(routes::logout))
             .route("/verify-2fa", post(routes::verify_2fa))
             .route("/verify-token", post(routes::verify_token))
-            .with_state(Arc::new(app_state))
+            .with_state(app_state)
             .layer(cors);
 
         let listener = TcpListener::bind(address).await?;
@@ -68,5 +65,3 @@ impl Application {
 pub struct ErrorResponse {
     pub error: String,
 }
-
-pub type UserState = State<Arc<AppState<HashmapUserStore>>>;

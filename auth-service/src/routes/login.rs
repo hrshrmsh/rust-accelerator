@@ -3,25 +3,20 @@ use axum_extra::extract::CookieJar;
 use serde::Deserialize;
 
 use crate::{
-    UserState,
-    domain::{AuthAPIError, Email, Password, UserStore},
+    app_state::AppState,
+    domain::{AuthAPIError, Email, Password},
     utils::auth,
 };
 
 pub async fn login(
-    State(state): UserState,
+    State(state): State<AppState>,
     jar: CookieJar,
     Json(request): Json<LoginRequest>,
 ) -> Result<(CookieJar, impl IntoResponse), AuthAPIError> {
     let email: Email = request.email.parse()?;
     let password: Password = request.password.parse()?;
 
-    state
-        .user_store
-        .read()
-        .await
-        .validate_user(&email, &password)
-        .await?;
+    state.user_store.validate_user(&email, &password).await?;
 
     let auth_cookie = auth::generate_auth_cookie(&email)?;
     let new_jar = jar.add(auth_cookie);

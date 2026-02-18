@@ -1,17 +1,16 @@
-use std::collections::HashMap;
-
 use async_trait::async_trait;
+use dashmap::DashMap;
 
 use crate::domain::{Email, Password, User, UserStore, UserStoreError};
 
-#[derive(Default)]
-pub struct HashmapUserStore {
-    users: HashMap<Email, User>,
+#[derive(Clone, Default)]
+pub struct HashMapUserStore {
+    users: DashMap<Email, User>,
 }
 
 #[async_trait]
-impl UserStore for HashmapUserStore {
-    async fn add_user(&mut self, user: User) -> Result<(), UserStoreError> {
+impl UserStore for HashMapUserStore {
+    async fn add_user(&self, user: User) -> Result<(), UserStoreError> {
         if self.users.contains_key(&user.email) {
             return Err(UserStoreError::UserAlreadyExists);
         } else {
@@ -47,7 +46,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_add_user() {
-        let mut store = HashmapUserStore {
+        let store = HashMapUserStore {
             ..Default::default()
         };
         let user1 = User {
@@ -65,7 +64,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_user() {
-        let mut store = HashmapUserStore {
+        let store = HashMapUserStore {
             ..Default::default()
         };
         let user1 = User {
@@ -84,7 +83,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_validate_user() {
-        let mut store = HashmapUserStore {
+        let store = HashMapUserStore {
             ..Default::default()
         };
         let user1 = User {

@@ -6,7 +6,11 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::{ErrorResponse, domain::UserStoreError, utils::auth::GenerateTokenError};
+use crate::{
+    ErrorResponse,
+    domain::{TokenStoreError, UserStoreError},
+    utils::auth::GenerateTokenError,
+};
 
 #[derive(Error, Debug, Serialize, Deserialize)]
 pub enum AuthAPIError {
@@ -20,7 +24,7 @@ pub enum AuthAPIError {
     AuthenticationError,
     #[error("Missing Token!")]
     MissingToken,
-    #[error("Invalid Token!")]
+    #[error("JWT is not valid!")]
     InvalidToken,
 }
 
@@ -56,6 +60,15 @@ impl From<GenerateTokenError> for AuthAPIError {
         match value {
             GenerateTokenError::TokenError(_) => Self::InvalidToken,
             GenerateTokenError::UnexpectedError => Self::UnexpectedError,
+        }
+    }
+}
+
+impl From<TokenStoreError> for AuthAPIError {
+    fn from(value: TokenStoreError) -> Self {
+        match value {
+            TokenStoreError::MissingToken => Self::MissingToken,
+            TokenStoreError::UnexpectedError => Self::UnexpectedError,
         }
     }
 }
