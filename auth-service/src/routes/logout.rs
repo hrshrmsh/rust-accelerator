@@ -15,11 +15,7 @@ pub async fn logout(
     let token = cookie.value().to_string();
 
     // asserts the token is still valid
-    let _ = validate_token(&token).await?;
-
-    if state.banned_token_store.check_token(&token).await? {
-        return Err(AuthAPIError::InvalidToken);
-    }
+    let _ = validate_token(state.banned_token_store.clone(), &token).await?;
 
     let updated_jar = jar.remove(Cookie::from(JWT_COOKIE_NAME));
     state.banned_token_store.add_token(&token).await?;

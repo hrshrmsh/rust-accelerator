@@ -60,6 +60,7 @@ impl From<GenerateTokenError> for AuthAPIError {
         match value {
             GenerateTokenError::TokenError(_) => Self::InvalidToken,
             GenerateTokenError::UnexpectedError => Self::UnexpectedError,
+            GenerateTokenError::BannedToken => Self::InvalidToken,
         }
     }
 }
