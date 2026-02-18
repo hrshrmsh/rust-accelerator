@@ -1,6 +1,8 @@
 use std::sync::Arc;
 
-use auth_service::{Application, app_state::AppState, services::HashmapUserStore, utils::constants::test};
+use auth_service::{
+    Application, app_state::AppState, services::HashmapUserStore, utils::constants::test,
+};
 
 use reqwest::cookie::Jar;
 use tokio::sync::RwLock;

@@ -1,6 +1,8 @@
 use std::sync::Arc;
 
-use auth_service::{Application, app_state::AppState, services::HashmapUserStore, utils::constants::prod};
+use auth_service::{
+    Application, app_state::AppState, services::HashmapUserStore, utils::constants::prod,
+};
 use tokio::sync::RwLock;
 
 #[tokio::main]
