@@ -1,9 +1,13 @@
 use std::{error::Error, sync::Arc};
 
-use axum::{Router, extract::State, routing::post, serve::Serve};
+use axum::{Router, extract::State, http::Method, routing::post, serve::Serve};
+use dotenvy::dotenv;
 use serde::{Deserialize, Serialize};
 use tokio::net::TcpListener;
-use tower_http::services::{ServeDir, ServeFile};
+use tower_http::{
+    cors::CorsLayer,
+    services::{ServeDir, ServeFile},
+};
 
 pub mod app_state;
 pub mod domain;
@@ -13,7 +17,7 @@ pub mod utils;
 
 use app_state::AppState;
 
-use crate::services::HashmapUserStore;
+use crate::{services::HashmapUserStore, utils::constants::DROPLET_IP};
 
 pub struct Application {
     server: Serve<TcpListener, Router, Router>,
@@ -28,6 +32,16 @@ impl Application {
         let assets_dir =
             ServeDir::new("assets").not_found_service(ServeFile::new("assets/index.html"));
 
+        let allowed_origins = [
+            "http://localhost:8000".parse()?,
+            format!("http://{}:8000", *DROPLET_IP).parse()?,
+        ];
+
+        let cors = CorsLayer::new()
+            .allow_methods([Method::GET, Method::POST])
+            .allow_credentials(true)
+            .allow_origin(allowed_origins);
+
         let router = Router::new()
             .fallback_service(assets_dir)
             .route("/signup", post(routes::signup))
@@ -35,7 +49,8 @@ impl Application {
             .route("/logout", post(routes::logout))
             .route("/verify-2fa", post(routes::verify_2fa))
             .route("/verify-token", post(routes::verify_token))
-            .with_state(Arc::new(app_state));
+            .with_state(Arc::new(app_state))
+            .layer(cors);
 
         let listener = TcpListener::bind(address).await?;
         let address = listener.local_addr()?.to_string();
