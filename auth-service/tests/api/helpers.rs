@@ -42,7 +42,11 @@ impl TestApp {
 
     #[inline]
     pub async fn get_root(&self) -> reqwest::Response {
-        self.get("/").await
+        self.http_client
+            .get(&format!("{}/", &self.address))
+            .send()
+            .await
+            .expect("could not execute request")
     }
 
     #[inline]
@@ -86,17 +90,16 @@ impl TestApp {
     }
 
     #[inline]
-    pub async fn post_verify_token(&self) -> reqwest::Response {
-        self.post("/verify-token").await
-    }
-
-    #[inline]
-    async fn get(&self, addr: &str) -> reqwest::Response {
+    pub async fn post_verify_token<Body>(&self, body: &Body) -> reqwest::Response
+    where
+        Body: serde::Serialize,
+    {
         self.http_client
-            .get(&format!("{}{addr}", &self.address))
+            .post(format!("{}/verify-token", &self.address))
+            .json(body)
             .send()
             .await
-            .expect("could not execute request")
+            .expect("failed to execute request")
     }
 
     #[inline]
