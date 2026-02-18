@@ -18,14 +18,18 @@ pub enum AuthAPIError {
     UnexpectedError,
     #[error("Authentication failed!")]
     AuthenticationError,
+    #[error("Missing Token!")]
+    MissingToken,
+    #[error("Invalid Token!")]
+    InvalidToken,
 }
 
 impl IntoResponse for AuthAPIError {
     fn into_response(self) -> Response {
         let status = match self {
             Self::UserAlreadyExists => StatusCode::CONFLICT,
-            Self::InvalidCredentials => StatusCode::BAD_REQUEST,
-            Self::AuthenticationError => StatusCode::UNAUTHORIZED,
+            Self::InvalidCredentials | Self::MissingToken => StatusCode::BAD_REQUEST,
+            Self::AuthenticationError | Self::InvalidToken => StatusCode::UNAUTHORIZED,
             Self::UnexpectedError => StatusCode::INTERNAL_SERVER_ERROR,
         };
         let body = Json(ErrorResponse {
@@ -48,7 +52,10 @@ impl From<UserStoreError> for AuthAPIError {
 }
 
 impl From<GenerateTokenError> for AuthAPIError {
-    fn from(_: GenerateTokenError) -> Self {
-        Self::UnexpectedError
+    fn from(value: GenerateTokenError) -> Self {
+        match value {
+            GenerateTokenError::TokenError(_) => Self::InvalidToken,
+            GenerateTokenError::UnexpectedError => Self::UnexpectedError,
+        }
     }
 }

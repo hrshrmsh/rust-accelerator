@@ -45,8 +45,8 @@ fn generate_auth_token(email: &Email) -> Result<String, GenerateTokenError> {
         .map_err(|_| GenerateTokenError::UnexpectedError)?;
 
     let claims = Claims {
-        sub: email.as_ref().to_string(),
-        exp: expiration,
+        subject: email.as_ref().to_string(),
+        expirary: expiration,
     };
 
     create_token(&claims)
@@ -71,8 +71,10 @@ fn create_token(claims: &Claims) -> Result<String, GenerateTokenError> {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
-    pub sub: String,
-    pub exp: usize,
+    #[serde(rename = "sub")]
+    pub subject: String,
+    #[serde(rename = "exp")]
+    pub expirary: usize,
 }
 
 #[cfg(test)]
@@ -116,14 +118,14 @@ mod tests {
         let email: Email = "test@example.com".parse().unwrap();
         let token = generate_auth_token(&email).unwrap();
         let result = validate_token(&token).await.unwrap();
-        assert_eq!(result.sub, "test@example.com");
+        assert_eq!(result.subject, "test@example.com");
 
         let exp = Utc::now()
             .checked_add_signed(chrono::Duration::try_minutes(9).expect("valid duration"))
             .expect("valid timestamp")
             .timestamp();
 
-        assert!(result.exp > exp as usize);
+        assert!(result.expirary > exp as usize);
     }
 
     #[tokio::test]
