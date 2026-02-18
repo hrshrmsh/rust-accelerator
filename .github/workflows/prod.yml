@@ -40,6 +40,9 @@ jobs:
 
     - name: Build and test auth-service code
       working-directory: ./auth-service
+      env:
+        JWT_SECRET: "dummy-jwt-secret-for-ci-tests-only-123456789"
+        DROPLET_IP: "127.0.0.1"
       run: |
         cargo build --verbose
         cargo test --verbose
@@ -92,7 +95,7 @@ jobs:
           cd ~
           docker login -u $DOCKER_USERNAME -p $DOCKERHUB_TOKEN
           export JWT_SECRET=${{ secrets.JWT_SECRET }}
-          export AUTH_SERVICE_IP=${{ vars.DROPLET_IP }}
+          export AUTH_SERVICE_IP=${{ secrets.DROPLET_IP }}
           docker compose down
           docker compose pull
           docker compose up -d --remove-orphans
