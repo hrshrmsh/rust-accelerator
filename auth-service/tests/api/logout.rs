@@ -100,7 +100,7 @@ async fn setup_user(app: &TestApp) -> Response {
     app.post_signup(&json!({
         "email": "sample@example.com",
         "password": "password123",
-        "requires2FA": true
+        "requires2FA": false
     }))
     .await
     .error_for_status()

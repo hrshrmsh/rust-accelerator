@@ -1,6 +1,6 @@
 use serde_json::json;
 
-use auth_service::{ErrorResponse, utils::constants::JWT_COOKIE_NAME};
+use auth_service::{ErrorResponse, routes::LoginResponse, utils::constants::JWT_COOKIE_NAME};
 
 use crate::helpers::TestApp;
 
@@ -27,28 +27,22 @@ async fn should_return_200_if_valid_credentials_and_2fa_disabled() {
 }
 
 #[tokio::test]
-async fn should_return_422_if_malformed_credentials() {
+async fn should_return_206_if_valid_credentials_and_2fa_enabled() {
     let app = TestApp::new().await;
+    setup_users(&app).await;
 
-    let test_cases = [
-        json!({
-            "password": "password123"
-        }),
-        json!({
-            "email": "amazing@cool.com"
-        }),
-    ];
+    let response = app
+        .post_login(&json!({
+            "email": "user@example.com",
+            "password": "password123",
+        }))
+        .await;
 
-    for test_case in &test_cases {
-        let response = app.post_login(test_case).await;
-
-        assert_eq!(
-            response.status().as_u16(),
-            422,
-            "Failed for input: {:?}",
-            test_case
-        );
-    }
+    assert_eq!(response.status().as_u16(), 206);
+    assert_eq!(
+        response.json::<LoginResponse>().await.unwrap().message,
+        "2fa required!"
+    );
 }
 
 #[tokio::test]
@@ -121,6 +115,31 @@ async fn should_return_401_if_incorrect_credentials() {
     );
 }
 
+#[tokio::test]
+async fn should_return_422_if_malformed_credentials() {
+    let app = TestApp::new().await;
+
+    let test_cases = [
+        json!({
+            "password": "password123"
+        }),
+        json!({
+            "email": "amazing@cool.com"
+        }),
+    ];
+
+    for test_case in &test_cases {
+        let response = app.post_login(test_case).await;
+
+        assert_eq!(
+            response.status().as_u16(),
+            422,
+            "Failed for input: {:?}",
+            test_case
+        );
+    }
+}
+
 // helper database
 async fn setup_users(app: &TestApp) {
     let users = [
@@ -133,6 +152,11 @@ async fn setup_users(app: &TestApp) {
             "email": "cthon98@bash.org",
             "password": "7!superdupersecure!7",
             "requires2FA": false
+        }),
+        json!({
+            "email": "user@example.com",
+            "password": "password123",
+            "requires2FA": true
         }),
     ];
 
