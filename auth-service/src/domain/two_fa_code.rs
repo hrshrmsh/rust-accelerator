@@ -1,6 +1,5 @@
 use std::str::FromStr;
 
-use rand::Rng;
 use validator::{Validate, ValidationError, ValidationErrors};
 
 use crate::domain::AuthAPIError;
