@@ -3,7 +3,7 @@ use std::sync::Arc;
 use auth_service::{
     Application,
     app_state::AppState,
-    services::{DashMapTwoFACodeStore, DashMapUserStore, DashSetBannedTokenStore},
+    services::{DashMapTwoFACodeStore, DashMapUserStore, DashSetBannedTokenStore, MockEmailClient},
     utils::constants::test,
 };
 
@@ -14,8 +14,6 @@ pub struct TestApp {
     pub address: String,
     pub cookie_jar: Arc<Jar>,
     pub http_client: reqwest::Client,
-    #[allow(unused)] // forgot to add this until later, don't want to refactor
-    pub user_store: Arc<DashMapUserStore>,
     pub banned_token_store: Arc<DashSetBannedTokenStore>,
     pub two_fa_code_store: Arc<DashMapTwoFACodeStore>,
 }
@@ -25,11 +23,13 @@ impl TestApp {
         let user_store = Arc::new(DashMapUserStore::default());
         let banned_token_store = Arc::new(DashSetBannedTokenStore::default());
         let two_fa_code_store = Arc::new(DashMapTwoFACodeStore::default());
+        let email_client = Arc::new(MockEmailClient);
 
         let app_state = AppState::new_tester(
             user_store.clone(),
             banned_token_store.clone(),
             two_fa_code_store.clone(),
+            email_client.clone(),
         );
 
         let app = Application::build(app_state, test::APP_ADDRESS)
@@ -51,7 +51,6 @@ impl TestApp {
             cookie_jar,
             http_client,
             banned_token_store,
-            user_store,
             two_fa_code_store,
         }
     }

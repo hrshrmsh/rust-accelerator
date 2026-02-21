@@ -25,9 +25,24 @@ pub async fn login(
 
             state
                 .two_fa_code_store
-                .add_code(email.clone(), login_attempt_id.clone(), two_fa_code)
+                .add_code(email.clone(), login_attempt_id.clone(), two_fa_code.clone())
                 .await?;
 
+            state
+                .email_client
+                .send_email(
+                    &email,
+                    "2FA required",
+                    &format!(
+                        "Hello user,\n\
+                    Your 2FA code is: {}. \
+                    Please enter it within the next 10 minutes.\n",
+                        two_fa_code.as_ref()
+                    ),
+                )
+                .await?;
+
+            // this is a bit scuffed, but it seems to work well with axum
             Ok((
                 jar,
                 (

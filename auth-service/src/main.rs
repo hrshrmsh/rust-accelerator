@@ -1,7 +1,7 @@
 use auth_service::{
     Application,
     app_state::AppState,
-    services::{DashMapTwoFACodeStore, DashMapUserStore, DashSetBannedTokenStore},
+    services::{DashMapTwoFACodeStore, DashMapUserStore, DashSetBannedTokenStore, MockEmailClient},
     utils::constants::prod,
 };
 
@@ -10,7 +10,13 @@ async fn main() {
     let user_store = DashMapUserStore::default();
     let banned_token_store = DashSetBannedTokenStore::default();
     let two_fa_code_store = DashMapTwoFACodeStore::default();
-    let app_state = AppState::new(user_store, banned_token_store, two_fa_code_store);
+    let email_client = MockEmailClient;
+    let app_state = AppState::new(
+        user_store,
+        banned_token_store,
+        two_fa_code_store,
+        email_client,
+    );
 
     // Here we are using ip 0.0.0.0 so the service is listening on all the configured network interfaces.
     // This is needed for Docker to work, which we will add later on.
