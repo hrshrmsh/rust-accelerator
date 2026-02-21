@@ -4,11 +4,11 @@ use dashmap::DashSet;
 use crate::domain::{BannedTokenStore, TokenStoreError};
 
 #[derive(Clone, Debug, Default)]
-pub struct HashSetTokenStore {
+pub struct DashSetBannedTokenStore {
     banned_tokens: DashSet<String>,
 }
 
-impl HashSetTokenStore {
+impl DashSetBannedTokenStore {
     pub fn new() -> Self {
         Self {
             banned_tokens: DashSet::new(),
@@ -17,7 +17,7 @@ impl HashSetTokenStore {
 }
 
 #[async_trait]
-impl BannedTokenStore for HashSetTokenStore {
+impl BannedTokenStore for DashSetBannedTokenStore {
     async fn add_token(&self, token: &str) -> Result<(), TokenStoreError> {
         if token.is_empty() {
             Err(TokenStoreError::MissingToken)
@@ -43,7 +43,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_add_token_success_and_idempotent() {
-        let store = HashSetTokenStore::new();
+        let store = DashSetBannedTokenStore::new();
         let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWUsImlhdCI6MTUxNjIzOTAyMn0.KMUFsIDTnFmyG3nMiGM6H9FNFUROf3wh7SmqJp-QV30";
 
         assert_eq!(Ok(()), store.add_token(token).await);
@@ -53,7 +53,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_add_empty_token_fails() {
-        let store = HashSetTokenStore::new();
+        let store = DashSetBannedTokenStore::new();
 
         assert_eq!(
             Err(TokenStoreError::MissingToken),
@@ -63,7 +63,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_check_token() {
-        let store = HashSetTokenStore::new();
+        let store = DashSetBannedTokenStore::new();
         let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWUsImlhdCI6MTUxNjIzOTAyMn0.KMUFsIDTnFmyG3nMiGM6H9FNFUROf3wh7SmqJp-QV30";
 
         assert_eq!(Ok(false), store.check_token(token).await);
@@ -75,7 +75,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_check_empty_token_fails() {
-        let store = HashSetTokenStore::new();
+        let store = DashSetBannedTokenStore::new();
 
         assert_eq!(
             Err(TokenStoreError::MissingToken),

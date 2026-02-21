@@ -3,7 +3,7 @@ use std::sync::Arc;
 use auth_service::{
     Application,
     app_state::AppState,
-    services::{HashMapUserStore, HashSetTokenStore},
+    services::{DashMapTwoFACodeStore, DashMapUserStore, DashSetBannedTokenStore},
     utils::constants::test,
 };
 
@@ -15,15 +15,22 @@ pub struct TestApp {
     pub cookie_jar: Arc<Jar>,
     pub http_client: reqwest::Client,
     #[allow(unused)] // forgot to add this until later, don't want to refactor
-    pub user_store: Arc<HashMapUserStore>,
-    pub banned_token_store: Arc<HashSetTokenStore>,
+    pub user_store: Arc<DashMapUserStore>,
+    pub banned_token_store: Arc<DashSetBannedTokenStore>,
+    pub two_fa_code_store: Arc<DashMapTwoFACodeStore>,
 }
 
 impl TestApp {
     pub async fn new() -> Self {
-        let user_store = Arc::new(HashMapUserStore::default());
-        let banned_token_store = Arc::new(HashSetTokenStore::default());
-        let app_state = AppState::new_tester(user_store.clone(), banned_token_store.clone());
+        let user_store = Arc::new(DashMapUserStore::default());
+        let banned_token_store = Arc::new(DashSetBannedTokenStore::default());
+        let two_fa_code_store = Arc::new(DashMapTwoFACodeStore::default());
+
+        let app_state = AppState::new_tester(
+            user_store.clone(),
+            banned_token_store.clone(),
+            two_fa_code_store.clone(),
+        );
 
         let app = Application::build(app_state, test::APP_ADDRESS)
             .await
@@ -45,6 +52,7 @@ impl TestApp {
             http_client,
             banned_token_store,
             user_store,
+            two_fa_code_store,
         }
     }
 

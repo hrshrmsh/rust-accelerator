@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     app_state::AppState,
-    domain::{AuthAPIError, Email, Password},
+    domain::{AuthAPIError, Email, LoginAttemptId, Password, TwoFACode},
     utils::auth,
 };
 
@@ -19,11 +19,24 @@ pub async fn login(
     state.user_store.validate_user(&email, &password).await?;
 
     match state.user_store.get_user(&email).await?.requires_2fa {
-        true => Ok((
-            jar,
-            (StatusCode::PARTIAL_CONTENT, Json(LoginResponse::new())),
-        )
-            .into_response()),
+        true => {
+            let login_attempt_id = LoginAttemptId::default();
+            let two_fa_code = TwoFACode::default();
+
+            state
+                .two_fa_code_store
+                .add_code(email.clone(), login_attempt_id.clone(), two_fa_code)
+                .await?;
+
+            Ok((
+                jar,
+                (
+                    StatusCode::PARTIAL_CONTENT,
+                    Json(LoginResponse::new(&login_attempt_id)),
+                ),
+            )
+                .into_response())
+        }
         false => {
             let auth_cookie = auth::generate_auth_cookie(&email)?;
             let new_jar = jar.add(auth_cookie);
@@ -47,10 +60,10 @@ pub struct LoginResponse {
 }
 
 impl LoginResponse {
-    fn new() -> Self {
+    fn new(login_attempt_id: &LoginAttemptId) -> Self {
         Self {
             message: String::from("2fa required!"),
-            login_attemp_id: String::from("123456"), // TODO: add login attempt ids
+            login_attemp_id: login_attempt_id.as_ref().to_string(),
         }
     }
 }

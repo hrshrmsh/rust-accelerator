@@ -8,7 +8,7 @@ use thiserror::Error;
 
 use crate::{
     ErrorResponse,
-    domain::{TokenStoreError, UserStoreError},
+    domain::{TokenStoreError, TwoFACodeStoreError, UserStoreError},
     utils::auth::GenerateTokenError,
 };
 
@@ -26,13 +26,20 @@ pub enum AuthAPIError {
     MissingToken,
     #[error("JWT is not valid!")]
     InvalidToken,
+    #[error("Invalid 2FA code!")]
+    Invalid2FACode,
+    #[error("Invalid login attempt id!")]
+    InvalidLoginAttemptId,
 }
 
 impl IntoResponse for AuthAPIError {
     fn into_response(self) -> Response {
         let status = match self {
             Self::UserAlreadyExists => StatusCode::CONFLICT,
-            Self::InvalidCredentials | Self::MissingToken => StatusCode::BAD_REQUEST,
+            Self::InvalidCredentials
+            | Self::MissingToken
+            | Self::Invalid2FACode
+            | Self::InvalidLoginAttemptId => StatusCode::BAD_REQUEST,
             Self::AuthenticationError | Self::InvalidToken => StatusCode::UNAUTHORIZED,
             Self::UnexpectedError => StatusCode::INTERNAL_SERVER_ERROR,
         };
@@ -70,6 +77,15 @@ impl From<TokenStoreError> for AuthAPIError {
         match value {
             TokenStoreError::MissingToken => Self::MissingToken,
             TokenStoreError::UnexpectedError => Self::UnexpectedError,
+        }
+    }
+}
+
+impl From<TwoFACodeStoreError> for AuthAPIError {
+    fn from(value: TwoFACodeStoreError) -> Self {
+        match value {
+            TwoFACodeStoreError::LoginAttemptIdNotFound => Self::InvalidLoginAttemptId,
+            TwoFACodeStoreError::UnexpectedError => Self::UnexpectedError,
         }
     }
 }

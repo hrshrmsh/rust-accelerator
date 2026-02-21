@@ -1,6 +1,8 @@
 use serde_json::json;
 
-use auth_service::{ErrorResponse, routes::LoginResponse, utils::constants::JWT_COOKIE_NAME};
+use auth_service::{
+    ErrorResponse, domain::TwoFACodeStore, routes::LoginResponse, utils::constants::JWT_COOKIE_NAME,
+};
 
 use crate::helpers::TestApp;
 
@@ -37,12 +39,17 @@ async fn should_return_206_if_valid_credentials_and_2fa_enabled() {
             "password": "password123",
         }))
         .await;
-
     assert_eq!(response.status().as_u16(), 206);
-    assert_eq!(
-        response.json::<LoginResponse>().await.unwrap().message,
-        "2fa required!"
-    );
+
+    let code = app
+        .two_fa_code_store
+        .get_code(&"user@example.com".parse().unwrap())
+        .await
+        .unwrap();
+    let parsed_response = response.json::<LoginResponse>().await.unwrap();
+
+    assert_eq!(parsed_response.message, "2fa required!");
+    assert_eq!(parsed_response.login_attemp_id, code.0.as_ref());
 }
 
 #[tokio::test]

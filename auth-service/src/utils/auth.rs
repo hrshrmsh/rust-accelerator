@@ -94,7 +94,7 @@ pub struct Claims {
 
 #[cfg(test)]
 mod tests {
-    use crate::services::HashSetTokenStore;
+    use crate::services::DashSetBannedTokenStore;
 
     use super::*;
 
@@ -134,7 +134,7 @@ mod tests {
     async fn test_validate_token_with_valid_token() {
         let email: Email = "test@example.com".parse().unwrap();
         let token = generate_auth_token(&email).unwrap();
-        let banned_token_store = Arc::new(HashSetTokenStore::default());
+        let banned_token_store = Arc::new(DashSetBannedTokenStore::default());
         let result = validate_token(banned_token_store.clone(), &token)
             .await
             .unwrap();
@@ -151,7 +151,7 @@ mod tests {
     #[tokio::test]
     async fn test_validate_token_with_invalid_token() {
         let token = "invalid_token".to_string();
-        let banned_token_store = Arc::new(HashSetTokenStore::default());
+        let banned_token_store = Arc::new(DashSetBannedTokenStore::default());
         let result = validate_token(banned_token_store, &token).await;
 
         assert!(result.is_err());
@@ -161,7 +161,7 @@ mod tests {
     async fn test_validate_token_with_banned_token() {
         let email: Email = "test@example.com".parse().unwrap();
         let token = generate_auth_token(&email).unwrap();
-        let banned_token_store = Arc::new(HashSetTokenStore::default());
+        let banned_token_store = Arc::new(DashSetBannedTokenStore::default());
         banned_token_store.add_token(&token).await.unwrap();
 
         let result = validate_token(banned_token_store, &token).await;
