@@ -71,14 +71,14 @@ pub struct LoginRequest {
 pub struct LoginResponse {
     pub message: String,
     #[serde(rename = "loginAttemptId")]
-    pub login_attemp_id: String,
+    pub login_attempt_id: String,
 }
 
 impl LoginResponse {
     fn new(login_attempt_id: &LoginAttemptId) -> Self {
         Self {
             message: String::from("2fa required!"),
-            login_attemp_id: login_attempt_id.as_ref().to_string(),
+            login_attempt_id: login_attempt_id.as_ref().to_string(),
         }
     }
 }

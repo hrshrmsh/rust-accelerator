@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{fmt::Debug, sync::Arc};
 
 use auth_service::{
     Application,
@@ -100,8 +100,16 @@ impl TestApp {
     }
 
     #[inline]
-    pub async fn post_verify_2fa(&self) -> reqwest::Response {
-        self.post("/verify-2fa").await
+    pub async fn post_verify_2fa<Body>(&self, body: &Body) -> reqwest::Response
+    where
+        Body: serde::Serialize + Debug,
+    {
+        self.http_client
+            .post(format!("{}/verify-2fa", &self.address))
+            .json(body)
+            .send()
+            .await
+            .expect("failed to execute request")
     }
 
     #[inline]
@@ -115,15 +123,6 @@ impl TestApp {
             .send()
             .await
             .expect("failed to execute request")
-    }
-
-    #[inline]
-    async fn post(&self, addr: &str) -> reqwest::Response {
-        self.http_client
-            .post(&format!("{}{addr}", &self.address))
-            .send()
-            .await
-            .expect("could not execute request")
     }
 
     // temp helper fn

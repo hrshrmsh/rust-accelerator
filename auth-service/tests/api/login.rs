@@ -49,7 +49,7 @@ async fn should_return_206_if_valid_credentials_and_2fa_enabled() {
     let parsed_response = response.json::<LoginResponse>().await.unwrap();
 
     assert_eq!(parsed_response.message, "2fa required!");
-    assert_eq!(parsed_response.login_attemp_id, code.0.as_ref());
+    assert_eq!(parsed_response.login_attempt_id, code.0.as_ref());
 }
 
 #[tokio::test]
