@@ -5,6 +5,7 @@ use dotenvy::dotenv;
 pub mod env {
     pub const JWT_SECRET_ENV_VAR: &str = "JWT_SECRET";
     pub const DROPLET_IP_ENV_VAR: &str = "DROPLET_IP";
+    pub const DATABASE_URL_ENV_VAR: &str = "DATABASE_URL";
 }
 
 pub mod prod {
@@ -17,8 +18,9 @@ pub mod test {
 
 pub const JWT_COOKIE_NAME: &str = "jwt";
 
+// load env vars every lock for compatability with multiple env files (i.e. test env)
+// overhead is fairly minimal for a web server
 pub static JWT_SECRET: LazyLock<String> = LazyLock::new(|| {
-    // load env vars
     dotenv().ok();
     let secret = std::env::var(env::JWT_SECRET_ENV_VAR).expect("JWT_SECRET must be set!");
     if secret.is_empty() {
@@ -34,4 +36,13 @@ pub static DROPLET_IP: LazyLock<String> = LazyLock::new(|| {
         panic!("DROPLET_IP must not be empty!");
     }
     ip
+});
+
+pub static DATABASE_URL: LazyLock<String> = LazyLock::new(|| {
+    dotenv().ok();
+    let db_url = std::env::var(env::DATABASE_URL_ENV_VAR).expect("DATABASE_URL must be set!");
+    if db_url.is_empty() {
+        panic!("DATABASE_URL must not be empty!");
+    }
+    db_url
 });

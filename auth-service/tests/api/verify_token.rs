@@ -1,12 +1,12 @@
 use auth_service::utils::constants::JWT_COOKIE_NAME;
 use serde_json::json;
+use test_context::test_context;
 
 use crate::helpers::TestApp;
 
+#[test_context(TestApp)]
 #[tokio::test]
-async fn should_return_200_valid_token() {
-    let app = TestApp::new().await;
-
+async fn should_return_200_valid_token(app: &mut TestApp) {
     app.post_signup(&json!({
         "email": "hello@world.com",
         "password": "password123",
@@ -39,10 +39,9 @@ async fn should_return_200_valid_token() {
     assert_eq!(verify_response.status().as_u16(), 200);
 }
 
+#[test_context(TestApp)]
 #[tokio::test]
-async fn should_return_422_if_malformed_input() {
-    let app = TestApp::new().await;
-
+async fn should_return_422_if_malformed_input(app: &mut TestApp) {
     let response = app
         .post_verify_token(&json!({
             "weird": "stuff"
@@ -52,10 +51,9 @@ async fn should_return_422_if_malformed_input() {
     assert_eq!(response.status().as_u16(), 422);
 }
 
+#[test_context(TestApp)]
 #[tokio::test]
-async fn should_return_401_if_invalid_token() {
-    let app = TestApp::new().await;
-
+async fn should_return_401_if_invalid_token(app: &mut TestApp) {
     let response = app
         .post_verify_token(&json!({
             "token": format!(

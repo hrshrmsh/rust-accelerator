@@ -2,11 +2,11 @@ use crate::helpers::TestApp;
 
 use auth_service::{ErrorResponse, routes::SignupResponse};
 use serde_json::json;
+use test_context::test_context;
 
+#[test_context(TestApp)]
 #[tokio::test]
-async fn should_return_422_if_malformed_input() {
-    let app = TestApp::new().await;
-
+async fn should_return_422_if_malformed_input(app: &mut TestApp) {
     let random_email = TestApp::get_random_email();
 
     let test_cases = [
@@ -35,10 +35,9 @@ async fn should_return_422_if_malformed_input() {
     }
 }
 
+#[test_context(TestApp)]
 #[tokio::test]
-async fn should_return_201_if_valid_input() {
-    let app = TestApp::new().await;
-
+async fn should_return_201_if_valid_input(app: &mut TestApp) {
     let test_cases = [
         json! {
             {
@@ -70,10 +69,9 @@ async fn should_return_201_if_valid_input() {
     }
 }
 
+#[test_context(TestApp)]
 #[tokio::test]
-async fn should_return_400_if_invalid_input() {
-    let app = TestApp::new().await;
-
+async fn should_return_400_if_invalid_input(app: &mut TestApp) {
     let invalid_emails = &["", "don't have amerspand", "longstring12345?"];
     let invalid_passwords = &["", "1234567", "passwor"];
 
@@ -109,9 +107,9 @@ async fn should_return_400_if_invalid_input() {
     }
 }
 
+#[test_context(TestApp)]
 #[tokio::test]
-async fn should_return_409_if_email_already_exists() {
-    let app = TestApp::new().await;
+async fn should_return_409_if_email_already_exists(app: &mut TestApp) {
     // Call the signup route twice. The second request should fail with a 409 HTTP status code
     let user = json!({
         "email": "hello@world.com",

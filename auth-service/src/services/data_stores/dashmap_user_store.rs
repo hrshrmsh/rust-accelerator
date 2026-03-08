@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use dashmap::DashMap;
 
-use crate::domain::{Email, Password, User, UserStore, UserStoreError};
+use crate::domain::{Email, User, UserStore, UserStoreError};
 
 #[derive(Clone, Default)]
 pub struct DashMapUserStore {
@@ -26,22 +26,19 @@ impl UserStore for DashMapUserStore {
             .ok_or_else(|| UserStoreError::UserNotFound)
     }
 
-    async fn validate_user(
-        &self,
-        email: &Email,
-        password: &Password,
-    ) -> Result<(), UserStoreError> {
+    async fn validate_user(&self, email: &Email, password: &str) -> Result<(), UserStoreError> {
         let user = self.get_user(email).await?;
-        if user.password != *password {
-            Err(UserStoreError::InvalidCredentials)
-        } else {
-            Ok(())
-        }
+        user.password
+            .verify_raw_password(password)
+            .await
+            .map_err(|_| UserStoreError::InvalidCredentials)
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::domain::HashedPassword;
+
     use super::*;
 
     #[tokio::test]
@@ -51,7 +48,7 @@ mod tests {
         };
         let user1 = User {
             email: "a@b.com".parse().unwrap(),
-            password: "password".parse().unwrap(),
+            password: HashedPassword::parse("password".to_string()).await.unwrap(),
             requires_2fa: true,
         };
 
@@ -69,7 +66,7 @@ mod tests {
         };
         let user1 = User {
             email: "a@b.com".parse().unwrap(),
-            password: "password".parse().unwrap(),
+            password: HashedPassword::parse("password".to_string()).await.unwrap(),
             requires_2fa: true,
         };
         store.add_user(user1.clone()).await.unwrap();
@@ -88,20 +85,15 @@ mod tests {
         };
         let user1 = User {
             email: "a@b.com".parse().unwrap(),
-            password: "password".parse().unwrap(),
+            password: HashedPassword::parse("password".to_string()).await.unwrap(),
             requires_2fa: true,
         };
         store.add_user(user1.clone()).await.unwrap();
 
-        assert_eq!(
-            Ok(()),
-            store.validate_user(&user1.email, &user1.password).await
-        );
+        assert_eq!(Ok(()), store.validate_user(&user1.email, "password").await);
         assert_eq!(
             Err(UserStoreError::InvalidCredentials),
-            store
-                .validate_user(&user1.email, &"wrong password".parse().unwrap())
-                .await
+            store.validate_user(&user1.email, "wrong password").await
         )
     }
 }

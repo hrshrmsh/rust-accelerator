@@ -1,13 +1,13 @@
 use auth_service::{domain::BannedTokenStore, utils::constants::JWT_COOKIE_NAME};
 use reqwest::Response;
 use serde_json::json;
+use test_context::test_context;
 
 use crate::helpers::TestApp;
 
+#[test_context(TestApp)]
 #[tokio::test]
-async fn should_return_200_if_valid_jwt_cookie() {
-    let app = TestApp::new().await;
-
+async fn should_return_200_if_valid_jwt_cookie(app: &mut TestApp) {
     let jwt_token = setup_user(&app)
         .await
         .cookies()
@@ -24,22 +24,20 @@ async fn should_return_200_if_valid_jwt_cookie() {
             .check_token(&jwt_token)
             .await
             .unwrap()
-    )
+    );
 }
 
+#[test_context(TestApp)]
 #[tokio::test]
-async fn should_return_400_if_jwt_cookie_missing() {
-    let app = TestApp::new().await;
-
+async fn should_return_400_if_jwt_cookie_missing(app: &mut TestApp) {
     let response = app.post_logout().await;
 
     assert_eq!(response.status().as_u16(), 400);
 }
 
+#[test_context(TestApp)]
 #[tokio::test]
-async fn should_return_400_if_logout_called_twice_in_a_row() {
-    let app = TestApp::new().await;
-
+async fn should_return_400_if_logout_called_twice_in_a_row(app: &mut TestApp) {
     setup_user(&app).await.error_for_status().ok();
     app.post_logout().await.error_for_status().ok();
     let response = app.post_logout().await;
@@ -47,10 +45,9 @@ async fn should_return_400_if_logout_called_twice_in_a_row() {
     assert_eq!(response.status().as_u16(), 400);
 }
 
+#[test_context(TestApp)]
 #[tokio::test]
-async fn should_return_401_if_invalid_token() {
-    let app = TestApp::new().await;
-
+async fn should_return_401_if_invalid_token(app: &mut TestApp) {
     // add invalid cookie
     app.cookie_jar.add_cookie_str(
         &format!(
@@ -65,10 +62,9 @@ async fn should_return_401_if_invalid_token() {
     assert_eq!(response.status().as_u16(), 401);
 }
 
+#[test_context(TestApp)]
 #[tokio::test]
-async fn should_return_401_if_banned_token() {
-    let app = TestApp::new().await;
-
+async fn should_return_401_if_banned_token(app: &mut TestApp) {
     let jwt_token = setup_user(&app)
         .await
         .cookies()
@@ -93,7 +89,7 @@ async fn should_return_401_if_banned_token() {
             .check_token(&jwt_token)
             .await
             .unwrap()
-    )
+    );
 }
 
 async fn setup_user(app: &TestApp) -> Response {

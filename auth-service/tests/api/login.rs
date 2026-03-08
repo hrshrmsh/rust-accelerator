@@ -3,12 +3,13 @@ use serde_json::json;
 use auth_service::{
     ErrorResponse, domain::TwoFACodeStore, routes::LoginResponse, utils::constants::JWT_COOKIE_NAME,
 };
+use test_context::test_context;
 
 use crate::helpers::TestApp;
 
+#[test_context(TestApp)]
 #[tokio::test]
-async fn should_return_200_if_valid_credentials_and_2fa_disabled() {
-    let app = TestApp::new().await;
+async fn should_return_200_if_valid_credentials_and_2fa_disabled(app: &mut TestApp) {
     setup_users(&app).await;
 
     let response = app
@@ -28,9 +29,9 @@ async fn should_return_200_if_valid_credentials_and_2fa_disabled() {
     assert!(!auth_cookie.value().is_empty());
 }
 
+#[test_context(TestApp)]
 #[tokio::test]
-async fn should_return_206_if_valid_credentials_and_2fa_enabled() {
-    let app = TestApp::new().await;
+async fn should_return_206_if_valid_credentials_and_2fa_enabled(app: &mut TestApp) {
     setup_users(&app).await;
 
     let response = app
@@ -52,10 +53,9 @@ async fn should_return_206_if_valid_credentials_and_2fa_enabled() {
     assert_eq!(parsed_response.login_attempt_id, code.0.as_ref());
 }
 
+#[test_context(TestApp)]
 #[tokio::test]
-async fn should_return_400_if_invalid_input() {
-    let app = TestApp::new().await;
-
+async fn should_return_400_if_invalid_input(app: &mut TestApp) {
     let invalid_emails = ["", "don't have amerspand", "longstring12345?"];
     let invalid_passwords = ["", "1234567", "passwor"];
 
@@ -90,9 +90,9 @@ async fn should_return_400_if_invalid_input() {
     }
 }
 
+#[test_context(TestApp)]
 #[tokio::test]
-async fn should_return_401_if_incorrect_credentials() {
-    let app = TestApp::new().await;
+async fn should_return_401_if_incorrect_credentials(app: &mut TestApp) {
     setup_users(&app).await;
 
     let response = app
@@ -122,10 +122,9 @@ async fn should_return_401_if_incorrect_credentials() {
     );
 }
 
+#[test_context(TestApp)]
 #[tokio::test]
-async fn should_return_422_if_malformed_credentials() {
-    let app = TestApp::new().await;
-
+async fn should_return_422_if_malformed_credentials(app: &mut TestApp) {
     let test_cases = [
         json!({
             "password": "password123"

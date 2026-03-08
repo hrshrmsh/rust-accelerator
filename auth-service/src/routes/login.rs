@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     app_state::AppState,
-    domain::{AuthAPIError, Email, LoginAttemptId, Password, TwoFACode},
+    domain::{AuthAPIError, Email, HashedPassword, LoginAttemptId, TwoFACode},
     utils::auth,
 };
 
@@ -14,9 +14,12 @@ pub async fn login(
     Json(request): Json<LoginRequest>,
 ) -> Result<impl IntoResponse, AuthAPIError> {
     let email: Email = request.email.parse()?;
-    let password: Password = request.password.parse()?;
+    HashedPassword::parse(request.password.clone()).await?;
 
-    state.user_store.validate_user(&email, &password).await?;
+    state
+        .user_store
+        .validate_user(&email, &request.password)
+        .await?;
 
     match state.user_store.get_user(&email).await?.requires_2fa {
         true => {

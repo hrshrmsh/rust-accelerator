@@ -3,11 +3,12 @@ use auth_service::domain::TwoFACodeStore;
 use auth_service::routes::LoginResponse;
 use auth_service::utils::constants::JWT_COOKIE_NAME;
 use serde_json::json;
+use test_context::test_context;
 
+#[test_context(TestApp)]
 #[tokio::test]
-async fn should_return_200_if_correct_code() {
+async fn should_return_200_if_correct_code(app: &mut TestApp) {
     // Make sure to assert the auth cookie gets set
-    let app = TestApp::new().await;
     let email = "test@example.com";
     let password = "password123";
 
@@ -62,10 +63,9 @@ async fn should_return_200_if_correct_code() {
     assert!(!auth_cookie.value().is_empty());
 }
 
+#[test_context(TestApp)]
 #[tokio::test]
-async fn should_return_422_if_malformed_input() {
-    let app = TestApp::new().await;
-
+async fn should_return_422_if_malformed_input(app: &mut TestApp) {
     let test_cases = [
         json!({}),
         json!({
@@ -98,10 +98,9 @@ async fn should_return_422_if_malformed_input() {
     }
 }
 
+#[test_context(TestApp)]
 #[tokio::test]
-async fn should_return_400_if_invalid_input() {
-    let app = TestApp::new().await;
-
+async fn should_return_400_if_invalid_input(app: &mut TestApp) {
     let test_cases = [
         json!({
             "email": "invalid",
@@ -142,9 +141,9 @@ async fn should_return_400_if_invalid_input() {
     }
 }
 
+#[test_context(TestApp)]
 #[tokio::test]
-async fn should_return_401_if_incorrect_credentials() {
-    let app = TestApp::new().await;
+async fn should_return_401_if_incorrect_credentials(app: &mut TestApp) {
     let email = "test@example.com".to_string();
     let password = "password123".to_string();
 
@@ -199,9 +198,9 @@ async fn should_return_401_if_incorrect_credentials() {
     );
 }
 
+#[test_context(TestApp)]
 #[tokio::test]
-async fn should_return_401_if_old_code() {
-    let app = TestApp::new().await;
+async fn should_return_401_if_old_code(app: &mut TestApp) {
     let email = "user@example.com".to_string();
     let password = "password123".to_string();
 
@@ -237,9 +236,9 @@ async fn should_return_401_if_old_code() {
     );
 }
 
+#[test_context(TestApp)]
 #[tokio::test]
-async fn should_return_401_if_same_code_twice() {
-    let app = TestApp::new().await;
+async fn should_return_401_if_same_code_twice(app: &mut TestApp) {
     let email = "test@example.com";
     let password = "password123";
 

@@ -2,6 +2,7 @@ use std::error::Error;
 
 use axum::{Router, http::Method, routing::post, serve::Serve};
 use serde::{Deserialize, Serialize};
+use sqlx::{PgPool, postgres::PgPoolOptions};
 use tokio::net::TcpListener;
 use tower_http::{
     cors::CorsLayer,
@@ -64,4 +65,8 @@ impl Application {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ErrorResponse {
     pub error: String,
+}
+
+pub async fn get_postgres_pool(url: &str) -> Result<PgPool, sqlx::Error> {
+    PgPoolOptions::new().max_connections(5).connect(url).await
 }

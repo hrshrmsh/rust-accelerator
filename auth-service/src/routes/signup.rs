@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     app_state::AppState,
-    domain::{AuthAPIError, User},
+    domain::{AuthAPIError, HashedPassword, User},
 };
 
 pub async fn signup(
@@ -13,7 +13,11 @@ pub async fn signup(
     let email = request.email;
     let password = request.password;
 
-    let user = User::new(email.parse()?, password.parse()?, request.requires_2fa);
+    let user = User::new(
+        email.parse()?,
+        HashedPassword::parse(password).await?,
+        request.requires_2fa,
+    );
 
     state.user_store.add_user(user).await?;
 
