@@ -7,3 +7,5 @@ services:
     restart: no
     build:
       context: ./auth-service # specify directory where local Dockerfile is located
+  db:
+    restart: no
