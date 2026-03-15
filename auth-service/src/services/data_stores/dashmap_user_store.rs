@@ -14,7 +14,7 @@ impl UserStore for DashMapUserStore {
         if self.users.contains_key(&user.email) {
             return Err(UserStoreError::UserAlreadyExists);
         } else {
-            self.users.insert((&user.email).clone(), user);
+            self.users.insert(user.email.clone(), user);
             Ok(())
         }
     }

@@ -7,8 +7,9 @@ use crate::helpers::TestApp;
 #[test_context(TestApp)]
 #[tokio::test]
 async fn should_return_200_valid_token(app: &mut TestApp) {
+    let email = TestApp::get_random_email();
     app.post_signup(&json!({
-        "email": "hello@world.com",
+        "email": &email,
         "password": "password123",
         "requires2FA": false,
     }))
@@ -18,7 +19,7 @@ async fn should_return_200_valid_token(app: &mut TestApp) {
 
     let login_response = app
         .post_login(&json!({
-            "email": "hello@world.com",
+            "email": &email,
             "password": "password123"
         }))
         .await

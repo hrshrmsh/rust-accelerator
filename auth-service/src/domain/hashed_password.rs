@@ -15,7 +15,7 @@ impl HashedPassword {
     pub async fn parse(pwd: String) -> Result<HashedPassword, AuthAPIError> {
         ValidateRange::validate_range(&pwd.len(), Some(8), None, None, None)
             .then_some(())
-            .ok_or_else(|| AuthAPIError::InvalidCredentials)?;
+            .ok_or(AuthAPIError::InvalidCredentials)?;
 
         let pwd_hash = compute_password_hash(&pwd).await?;
         Ok(HashedPassword(pwd_hash))

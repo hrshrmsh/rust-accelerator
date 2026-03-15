@@ -6,6 +6,7 @@ pub mod env {
     pub const JWT_SECRET_ENV_VAR: &str = "JWT_SECRET";
     pub const DROPLET_IP_ENV_VAR: &str = "DROPLET_IP";
     pub const DATABASE_URL_ENV_VAR: &str = "DATABASE_URL";
+    pub const REDIS_HOST_NAME_ENV_VAR: &str = "REDIS_HOSTNAME";
 }
 
 pub mod prod {
@@ -17,6 +18,7 @@ pub mod test {
 }
 
 pub const JWT_COOKIE_NAME: &str = "jwt";
+pub const DEFAULT_REDIS_HOSTNAME: &str = "127.0.0.1";
 
 // load env vars every lock for compatability with multiple env files (i.e. test env)
 // overhead is fairly minimal for a web server
@@ -45,4 +47,9 @@ pub static DATABASE_URL: LazyLock<String> = LazyLock::new(|| {
         panic!("DATABASE_URL must not be empty!");
     }
     db_url
+});
+
+pub static REDIS_HOST_NAME: LazyLock<String> = LazyLock::new(|| {
+    dotenv().ok();
+    std::env::var(env::REDIS_HOST_NAME_ENV_VAR).unwrap_or(DEFAULT_REDIS_HOSTNAME.to_string())
 });

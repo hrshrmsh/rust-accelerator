@@ -9,7 +9,7 @@ use test_context::test_context;
 #[tokio::test]
 async fn should_return_200_if_correct_code(app: &mut TestApp) {
     // Make sure to assert the auth cookie gets set
-    let email = "test@example.com";
+    let email = TestApp::get_random_email();
     let password = "password123";
 
     app.post_signup(&json!({
@@ -144,7 +144,7 @@ async fn should_return_400_if_invalid_input(app: &mut TestApp) {
 #[test_context(TestApp)]
 #[tokio::test]
 async fn should_return_401_if_incorrect_credentials(app: &mut TestApp) {
-    let email = "test@example.com".to_string();
+    let email = TestApp::get_random_email();
     let password = "password123".to_string();
 
     app.post_signup(&json!({
@@ -171,7 +171,7 @@ async fn should_return_401_if_incorrect_credentials(app: &mut TestApp) {
     let wrong_code = format!(
         "{:06}",
         (app.two_fa_code_store
-            .get_code(&"test@example.com".parse().unwrap())
+            .get_code(&email.parse().unwrap())
             .await
             .unwrap()
             .1
@@ -201,7 +201,7 @@ async fn should_return_401_if_incorrect_credentials(app: &mut TestApp) {
 #[test_context(TestApp)]
 #[tokio::test]
 async fn should_return_401_if_old_code(app: &mut TestApp) {
-    let email = "user@example.com".to_string();
+    let email = TestApp::get_random_email();
     let password = "password123".to_string();
 
     app.post_signup(&json!({
@@ -239,7 +239,7 @@ async fn should_return_401_if_old_code(app: &mut TestApp) {
 #[test_context(TestApp)]
 #[tokio::test]
 async fn should_return_401_if_same_code_twice(app: &mut TestApp) {
-    let email = "test@example.com";
+    let email = TestApp::get_random_email();
     let password = "password123";
 
     app.post_signup(&json!({

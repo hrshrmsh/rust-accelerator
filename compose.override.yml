@@ -9,3 +9,5 @@ services:
       context: ./auth-service # specify directory where local Dockerfile is located
   db:
     restart: no
+  redis:
+    restart: no

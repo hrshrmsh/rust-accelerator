@@ -1,15 +1,17 @@
+use auth_service::get_redis_client;
+use auth_service::services::{RedisBannedTokenStore, RedisTwoFACodeStore};
+use auth_service::utils::constants::REDIS_HOST_NAME;
 use sqlx::Connection;
 use std::str::FromStr;
 use std::{fmt::Debug, sync::Arc};
 use test_context::AsyncTestContext;
+use tokio::sync::RwLock;
 
 use auth_service::{
     Application,
     app_state::AppState,
     get_postgres_pool,
-    services::{
-        DashMapTwoFACodeStore, DashSetBannedTokenStore, MockEmailClient, PostgresUserStore,
-    },
+    services::{MockEmailClient, PostgresUserStore},
     utils::constants::{DATABASE_URL, test},
 };
 
@@ -25,18 +27,19 @@ pub struct TestApp {
     pub db_name: String,
     pub cookie_jar: Arc<Jar>,
     pub http_client: reqwest::Client,
-    pub banned_token_store: Arc<DashSetBannedTokenStore>,
-    pub two_fa_code_store: Arc<DashMapTwoFACodeStore>,
+    pub banned_token_store: Arc<RedisBannedTokenStore>,
+    pub two_fa_code_store: Arc<RedisTwoFACodeStore>,
     pub ready_to_drop: bool,
 }
 
 impl TestApp {
     pub async fn new() -> Self {
         let (db_name, pg_pool) = configure_postgresql().await;
+        let redis_connection = Arc::new(RwLock::new(configure_redis().await));
 
         let user_store = Arc::new(PostgresUserStore::new(pg_pool));
-        let banned_token_store = Arc::new(DashSetBannedTokenStore::default());
-        let two_fa_code_store = Arc::new(DashMapTwoFACodeStore::default());
+        let banned_token_store = Arc::new(RedisBannedTokenStore::new(redis_connection.clone()));
+        let two_fa_code_store = Arc::new(RedisTwoFACodeStore::new(redis_connection));
         let email_client = Arc::new(MockEmailClient);
 
         let app_state = AppState {
@@ -240,4 +243,12 @@ async fn delete_database(db_name: &str) {
         .execute(&mut connection)
         .await
         .expect("Failed to drop the database.");
+}
+
+async fn configure_redis() -> redis::aio::MultiplexedConnection {
+    get_redis_client(REDIS_HOST_NAME.to_string())
+        .expect("failed to get redis client")
+        .get_multiplexed_async_connection()
+        .await
+        .expect("failed to get redis connection")
 }

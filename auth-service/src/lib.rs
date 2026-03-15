@@ -1,6 +1,7 @@
 use std::error::Error;
 
 use axum::{Router, http::Method, routing::post, serve::Serve};
+use redis::{Client, RedisResult};
 use serde::{Deserialize, Serialize};
 use sqlx::{PgPool, postgres::PgPoolOptions};
 use tokio::net::TcpListener;
@@ -69,4 +70,9 @@ pub struct ErrorResponse {
 
 pub async fn get_postgres_pool(url: &str) -> Result<PgPool, sqlx::Error> {
     PgPoolOptions::new().max_connections(5).connect(url).await
+}
+
+pub fn get_redis_client(redis_hostname: String) -> RedisResult<Client> {
+    let url = format!("redis://{}/", redis_hostname);
+    redis::Client::open(url)
 }

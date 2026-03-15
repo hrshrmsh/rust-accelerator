@@ -93,8 +93,9 @@ async fn should_return_401_if_banned_token(app: &mut TestApp) {
 }
 
 async fn setup_user(app: &TestApp) -> Response {
+    let email = TestApp::get_random_email();
     app.post_signup(&json!({
-        "email": "sample@example.com",
+        "email": email.to_owned(),
         "password": "password123",
         "requires2FA": false
     }))
@@ -103,7 +104,7 @@ async fn setup_user(app: &TestApp) -> Response {
     .unwrap();
 
     app.post_login(&json!({
-        "email": "sample@example.com",
+        "email": email.to_owned(),
         "password": "password123",
     }))
     .await

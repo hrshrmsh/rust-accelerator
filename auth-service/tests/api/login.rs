@@ -10,12 +10,12 @@ use crate::helpers::TestApp;
 #[test_context(TestApp)]
 #[tokio::test]
 async fn should_return_200_if_valid_credentials_and_2fa_disabled(app: &mut TestApp) {
-    setup_users(&app).await;
+    let (email, password) = setup_users(&app, false).await;
 
     let response = app
         .post_login(&json!({
-            "email": "azure@diamond.com",
-            "password": "hunter22"
+            "email": email,
+            "password": password
         }))
         .await;
 
@@ -32,19 +32,19 @@ async fn should_return_200_if_valid_credentials_and_2fa_disabled(app: &mut TestA
 #[test_context(TestApp)]
 #[tokio::test]
 async fn should_return_206_if_valid_credentials_and_2fa_enabled(app: &mut TestApp) {
-    setup_users(&app).await;
+    let (email, password) = setup_users(&app, true).await;
 
     let response = app
         .post_login(&json!({
-            "email": "user@example.com",
-            "password": "password123",
+            "email": email.clone(),
+            "password": password
         }))
         .await;
     assert_eq!(response.status().as_u16(), 206);
 
     let code = app
         .two_fa_code_store
-        .get_code(&"user@example.com".parse().unwrap())
+        .get_code(&email.parse().unwrap())
         .await
         .unwrap();
     let parsed_response = response.json::<LoginResponse>().await.unwrap();
@@ -93,12 +93,16 @@ async fn should_return_400_if_invalid_input(app: &mut TestApp) {
 #[test_context(TestApp)]
 #[tokio::test]
 async fn should_return_401_if_incorrect_credentials(app: &mut TestApp) {
-    setup_users(&app).await;
+    let (email, password) = setup_users(&app, false).await;
+    let (mut wrong_email, mut wrong_password) = (email.clone(), password.clone());
+
+    wrong_email.push('A');
+    wrong_password.push('A');
 
     let response = app
         .post_login(&json!({
-            "email": "azure@diamond.com",
-            "password": "wrongpassword"
+            "email": email,
+            "password": wrong_password
         }))
         .await;
 
@@ -110,8 +114,8 @@ async fn should_return_401_if_incorrect_credentials(app: &mut TestApp) {
 
     let response = app
         .post_login(&json!({
-            "email": "azure2@diamond.com",
-            "password": "hunter22"
+            "email": wrong_email,
+            "password": password
         }))
         .await;
 
@@ -147,26 +151,15 @@ async fn should_return_422_if_malformed_credentials(app: &mut TestApp) {
 }
 
 // helper database
-async fn setup_users(app: &TestApp) {
-    let users = [
-        json!({
-            "email": "azure@diamond.com",
-            "password": "hunter22",
-            "requires2FA": false
-        }),
-        json!({
-            "email": "cthon98@bash.org",
-            "password": "7!superdupersecure!7",
-            "requires2FA": false
-        }),
-        json!({
-            "email": "user@example.com",
-            "password": "password123",
-            "requires2FA": true
-        }),
-    ];
+async fn setup_users(app: &TestApp, requires_2fa: bool) -> (String, String) {
+    let email = TestApp::get_random_email();
+    let password = "password123";
+    let user = json!({
+        "email": &email.to_owned(),
+        "password": password.to_owned(),
+        "requires2FA": requires_2fa
+    });
 
-    for user in &users {
-        app.post_signup(user).await.error_for_status().unwrap();
-    }
+    app.post_signup(&user).await.error_for_status().unwrap();
+    (email, password.to_owned())
 }
