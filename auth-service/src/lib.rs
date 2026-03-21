@@ -8,6 +8,7 @@ use tokio::net::TcpListener;
 use tower_http::{
     cors::CorsLayer,
     services::{ServeDir, ServeFile},
+    trace::TraceLayer,
 };
 
 pub mod app_state;
@@ -17,8 +18,12 @@ pub mod services;
 pub mod utils;
 
 use app_state::AppState;
+use tracing::info;
 
-use crate::utils::constants::DROPLET_IP;
+use crate::utils::{
+    constants::DROPLET_IP,
+    tracing::{make_span_with_request_id, on_request, on_response},
+};
 
 pub struct Application {
     server: Serve<TcpListener, Router, Router>,
@@ -48,7 +53,13 @@ impl Application {
             .route("/verify-2fa", post(routes::verify_2fa))
             .route("/verify-token", post(routes::verify_token))
             .with_state(app_state)
-            .layer(cors);
+            .layer(cors)
+            .layer(
+                TraceLayer::new_for_http()
+                    .make_span_with(make_span_with_request_id)
+                    .on_request(on_request)
+                    .on_response(on_response),
+            );
 
         let listener = TcpListener::bind(address).await?;
         let address = listener.local_addr()?.to_string();
@@ -58,7 +69,7 @@ impl Application {
     }
 
     pub async fn run(self) -> Result<(), std::io::Error> {
-        println!("server started! listening on {}.", &self.address);
+        info!("server started! listening on {}", &self.address);
         self.server.await
     }
 }

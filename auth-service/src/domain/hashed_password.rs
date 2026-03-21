@@ -4,6 +4,7 @@ use argon2::{
 };
 use serde::{Deserialize, Serialize};
 use tokio::task::spawn_blocking;
+use tracing::instrument;
 use validator::ValidateRange;
 
 use crate::domain::AuthAPIError;
@@ -26,6 +27,7 @@ impl HashedPassword {
         Ok(HashedPassword(hash))
     }
 
+    #[instrument(name = "Verify raw password", skip_all)]
     pub async fn verify_raw_password(&self, pwd_to_try: &str) -> Result<(), AuthAPIError> {
         let pwd_hash = self.as_ref().to_owned();
         let pwd_to_try = pwd_to_try.to_owned();
@@ -42,6 +44,7 @@ impl HashedPassword {
     }
 }
 
+#[instrument(name = "Computing password hash", skip_all)]
 async fn compute_password_hash(pwd: &str) -> Result<String, AuthAPIError> {
     let pwd = pwd.to_owned();
 

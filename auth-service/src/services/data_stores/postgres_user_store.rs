@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use sqlx::{PgPool, query};
+use tracing::instrument;
 
 use crate::domain::{Email, HashedPassword, User, UserStore, UserStoreError};
 
@@ -15,6 +16,7 @@ impl PostgresUserStore {
 
 #[async_trait]
 impl UserStore for PostgresUserStore {
+    #[instrument(name = "Adding user to PostgreSQL", skip_all)]
     async fn add_user(&self, user: User) -> Result<(), UserStoreError> {
         query!(
             "INSERT INTO users (email, password_hash, requires_2fa) VALUES ($1, $2, $3)",
@@ -34,6 +36,7 @@ impl UserStore for PostgresUserStore {
         Ok(())
     }
 
+    #[instrument(name = "Retrieving user from PostgreSQL", skip_all)]
     async fn get_user(&self, email: &Email) -> Result<User, UserStoreError> {
         let row = query!(
             "SELECT email, password_hash, requires_2fa FROM users WHERE email = $1",
@@ -62,6 +65,7 @@ impl UserStore for PostgresUserStore {
         }
     }
 
+    #[instrument(name = "Validating user credentials in PostgreSQL", skip_all)]
     async fn validate_user(&self, email: &Email, password: &str) -> Result<(), UserStoreError> {
         let user = self.get_user(email).await?;
         user.password
