@@ -1,6 +1,8 @@
 use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
 use axum_extra::extract::CookieJar;
+use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Serialize};
+use tracing::instrument;
 
 use crate::{
     app_state::AppState,
@@ -8,13 +10,16 @@ use crate::{
     utils::auth,
 };
 
+#[instrument(name = "Login", skip_all)]
 pub async fn login(
     State(state): State<AppState>,
     jar: CookieJar,
     Json(request): Json<LoginRequest>,
 ) -> Result<impl IntoResponse, AuthAPIError> {
-    let email: Email = request.email.parse()?;
-    HashedPassword::parse(request.password.clone()).await?;
+    let email: Email = Email::parse(request.email).map_err(|_| AuthAPIError::InvalidCredentials)?;
+    HashedPassword::parse(request.password.clone())
+        .await
+        .map_err(|_| AuthAPIError::InvalidCredentials)?;
 
     state
         .user_store
@@ -45,13 +50,10 @@ pub async fn login(
                 )
                 .await?;
 
-            // this is a bit scuffed, but it seems to work well with axum
             Ok((
+                StatusCode::PARTIAL_CONTENT,
                 jar,
-                (
-                    StatusCode::PARTIAL_CONTENT,
-                    Json(LoginResponse::new(&login_attempt_id)),
-                ),
+                Json(LoginResponse::new(&login_attempt_id)),
             )
                 .into_response())
         }
@@ -59,15 +61,22 @@ pub async fn login(
             let auth_cookie = auth::generate_auth_cookie(&email)?;
             let new_jar = jar.add(auth_cookie);
 
-            Ok((new_jar, (StatusCode::OK, ())).into_response())
+            Ok((StatusCode::OK, new_jar).into_response())
         }
     }
 }
 
-#[derive(Debug, PartialEq, Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct LoginRequest {
-    pub email: String,
-    pub password: String,
+    pub email: SecretString,
+    pub password: SecretString,
+}
+
+impl PartialEq for LoginRequest {
+    fn eq(&self, other: &Self) -> bool {
+        self.email.expose_secret() == other.email.expose_secret()
+            && self.password.expose_secret() == other.password.expose_secret()
+    }
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]

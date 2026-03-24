@@ -1,13 +1,14 @@
 use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
+use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
 use crate::{
     app_state::AppState,
-    domain::{AuthAPIError, HashedPassword, User},
+    domain::{AuthAPIError, Email, HashedPassword, User},
 };
 
-#[instrument(name = "Signup", skip_all, err(Debug))]
+#[instrument(name = "Signup", skip_all)]
 pub async fn signup(
     State(state): State<AppState>,
     Json(request): Json<SignupRequest>,
@@ -16,8 +17,10 @@ pub async fn signup(
     let password = request.password;
 
     let user = User::new(
-        email.parse()?,
-        HashedPassword::parse(password).await?,
+        Email::parse(email).map_err(|_| AuthAPIError::InvalidCredentials)?,
+        HashedPassword::parse(password)
+            .await
+            .map_err(|_| AuthAPIError::InvalidCredentials)?,
         request.requires_2fa,
     );
 
@@ -30,12 +33,20 @@ pub async fn signup(
     Ok((StatusCode::CREATED, response))
 }
 
-#[derive(Debug, PartialEq, Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct SignupRequest {
-    pub email: String,
-    pub password: String,
+    pub email: SecretString,
+    pub password: SecretString,
     #[serde(rename = "requires2FA")]
     pub requires_2fa: bool,
+}
+
+impl PartialEq for SignupRequest {
+    fn eq(&self, other: &Self) -> bool {
+        self.email.expose_secret() == other.email.expose_secret()
+            && self.password.expose_secret() == other.password.expose_secret()
+            && self.requires_2fa == other.requires_2fa
+    }
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]

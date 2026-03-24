@@ -2,6 +2,7 @@ use std::error::Error;
 
 use axum::{Router, http::Method, routing::post, serve::Serve};
 use redis::{Client, RedisResult};
+use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Serialize};
 use sqlx::{PgPool, postgres::PgPoolOptions};
 use tokio::net::TcpListener;
@@ -37,7 +38,7 @@ impl Application {
 
         let allowed_origins = [
             "http://localhost:8000".parse()?,
-            format!("http://{}:8000", *DROPLET_IP).parse()?,
+            format!("http://{}:8000", DROPLET_IP.expose_secret()).parse()?,
         ];
 
         let cors = CorsLayer::new()
@@ -79,11 +80,14 @@ pub struct ErrorResponse {
     pub error: String,
 }
 
-pub async fn get_postgres_pool(url: &str) -> Result<PgPool, sqlx::Error> {
-    PgPoolOptions::new().max_connections(5).connect(url).await
+pub async fn get_postgres_pool(url: &SecretString) -> Result<PgPool, sqlx::Error> {
+    PgPoolOptions::new()
+        .max_connections(5)
+        .connect(url.expose_secret())
+        .await
 }
 
-pub fn get_redis_client(redis_hostname: String) -> RedisResult<Client> {
-    let url = format!("redis://{}/", redis_hostname);
+pub fn get_redis_client(redis_hostname: &SecretString) -> RedisResult<Client> {
+    let url = format!("redis://{}/", redis_hostname.expose_secret());
     redis::Client::open(url)
 }

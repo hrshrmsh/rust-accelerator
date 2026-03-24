@@ -1,7 +1,10 @@
 use serde_json::json;
 
 use auth_service::{
-    ErrorResponse, domain::TwoFACodeStore, routes::LoginResponse, utils::constants::JWT_COOKIE_NAME,
+    ErrorResponse,
+    domain::{Email, TwoFACodeStore},
+    routes::LoginResponse,
+    utils::constants::JWT_COOKIE_NAME,
 };
 use test_context::test_context;
 
@@ -44,7 +47,7 @@ async fn should_return_206_if_valid_credentials_and_2fa_enabled(app: &mut TestAp
 
     let code = app
         .two_fa_code_store
-        .get_code(&email.parse().unwrap())
+        .get_code(&Email::parse(email.into()).unwrap())
         .await
         .unwrap();
     let parsed_response = response.json::<LoginResponse>().await.unwrap();

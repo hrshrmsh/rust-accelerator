@@ -1,14 +1,23 @@
 use std::time::Duration;
 
 use axum::{body::Body, http::Request, response::Response};
+use color_eyre::eyre::Result;
 use tracing::{Level, Span, event, field, span};
+use tracing_error::ErrorLayer;
+use tracing_subscriber::{EnvFilter, fmt, prelude::*};
 use uuid::Uuid;
 
-pub fn init_tracing() {
-    tracing_subscriber::fmt()
-        .compact()
-        .with_max_level(Level::DEBUG)
+pub fn init_tracing() -> Result<()> {
+    let fmt_layer = fmt::layer().compact();
+    let filter_layer = EnvFilter::try_from_default_env().or_else(|_| EnvFilter::try_new("info"))?;
+
+    tracing_subscriber::registry()
+        .with(filter_layer)
+        .with(fmt_layer)
+        .with(ErrorLayer::default())
         .init();
+
+    Ok(())
 }
 
 // creates a new tracing span with a unique request id for each incoming request.

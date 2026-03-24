@@ -1,8 +1,9 @@
-use std::sync::Arc;
+use std::{num::TryFromIntError, sync::Arc};
 
 use async_trait::async_trait;
 use redis::{AsyncTypedCommands, SetExpiry, SetOptions, aio::MultiplexedConnection};
 use tokio::sync::RwLock;
+use tracing::instrument;
 
 use crate::{
     domain::{BannedTokenStore, TokenStoreError},
@@ -24,6 +25,7 @@ impl RedisBannedTokenStore {
 
 #[async_trait]
 impl BannedTokenStore for RedisBannedTokenStore {
+    #[instrument(name = "Adding banned token to Redis", skip_all)]
     async fn add_token(&self, token: &str) -> Result<(), TokenStoreError> {
         if token.is_empty() {
             return Err(TokenStoreError::MissingToken);
@@ -33,18 +35,19 @@ impl BannedTokenStore for RedisBannedTokenStore {
         let options = SetOptions::default().with_expiration(SetExpiry::EX(
             TOKEN_TTL_SECONDS
                 .try_into()
-                .map_err(|_| TokenStoreError::UnexpectedError)?,
+                .map_err(|e: TryFromIntError| TokenStoreError::UnexpectedError(e.into()))?,
         ));
 
         let mut connection = self.connection.write().await;
         connection
             .set_options(key, true, options)
             .await
-            .map_err(|_| TokenStoreError::UnexpectedError)?;
+            .map_err(|e| TokenStoreError::UnexpectedError(e.into()))?;
 
         Ok(())
     }
 
+    #[instrument(name = "Checking banned token in Redis", skip_all)]
     async fn check_token(&self, token: &str) -> Result<bool, TokenStoreError> {
         if token.is_empty() {
             return Err(TokenStoreError::MissingToken);
@@ -55,7 +58,7 @@ impl BannedTokenStore for RedisBannedTokenStore {
         let banned = connection
             .exists(key)
             .await
-            .map_err(|_| TokenStoreError::UnexpectedError)?;
+            .map_err(|e| TokenStoreError::UnexpectedError(e.into()))?;
 
         Ok(banned)
     }

@@ -93,7 +93,7 @@ async fn should_return_400_if_invalid_input(app: &mut TestApp) {
     for invalid_password in invalid_passwords {
         let response = app
             .post_signup(&json!({
-                "email": "valid@email.com",
+                "email": TestApp::get_random_email(),
                 "password": invalid_password,
                 "requires2FA": true,
             }))

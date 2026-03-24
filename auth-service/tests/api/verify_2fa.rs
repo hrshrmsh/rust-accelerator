@@ -1,5 +1,5 @@
 use crate::helpers::TestApp;
-use auth_service::domain::TwoFACodeStore;
+use auth_service::domain::{Email, TwoFACodeStore};
 use auth_service::routes::LoginResponse;
 use auth_service::utils::constants::JWT_COOKIE_NAME;
 use serde_json::json;
@@ -40,7 +40,7 @@ async fn should_return_200_if_correct_code(app: &mut TestApp) {
 
     let code = app
         .two_fa_code_store
-        .get_code(&email.parse().unwrap())
+        .get_code(&Email::parse(email.clone().into()).unwrap())
         .await
         .unwrap()
         .1;
@@ -171,7 +171,7 @@ async fn should_return_401_if_incorrect_credentials(app: &mut TestApp) {
     let wrong_code = format!(
         "{:06}",
         (app.two_fa_code_store
-            .get_code(&email.parse().unwrap())
+            .get_code(&Email::parse(email.clone().into()).unwrap())
             .await
             .unwrap()
             .1
@@ -224,7 +224,7 @@ async fn should_return_401_if_old_code(app: &mut TestApp) {
         .post_verify_2fa(&json!({
             "email": &email,
             "loginAttemptId": &login_response.login_attempt_id,
-            "2FACode": app.two_fa_code_store.get_code(&email.parse().unwrap()).await.unwrap().1.as_ref(),
+            "2FACode": app.two_fa_code_store.get_code(&Email::parse(email.into()).unwrap()).await.unwrap().1.as_ref(),
         }))
         .await;
 
@@ -264,7 +264,7 @@ async fn should_return_401_if_same_code_twice(app: &mut TestApp) {
 
     let code = app
         .two_fa_code_store
-        .get_code(&email.parse().unwrap())
+        .get_code(&Email::parse(email.clone().into()).unwrap())
         .await
         .unwrap()
         .1;

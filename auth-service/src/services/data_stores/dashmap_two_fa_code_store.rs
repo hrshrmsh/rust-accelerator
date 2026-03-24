@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use color_eyre::eyre::eyre;
 use dashmap::DashMap;
 
 use crate::domain::{Email, LoginAttemptId, TwoFACode, TwoFACodeStore, TwoFACodeStoreError};
@@ -23,7 +24,9 @@ impl TwoFACodeStore for DashMapTwoFACodeStore {
     async fn remove_code(&self, email: &Email) -> Result<(), TwoFACodeStoreError> {
         self.codes
             .remove(email)
-            .ok_or(TwoFACodeStoreError::UnexpectedError)
+            .ok_or_else(|| {
+                TwoFACodeStoreError::UnexpectedError(eyre!("failed to remove 2fa code from store"))
+            })
             .map(|_| ())
     }
 
@@ -47,9 +50,9 @@ mod tests {
     async fn test_add_code_and_get() {
         let store = DashMapTwoFACodeStore::default();
 
-        let email: Email = "test@example.com".parse().unwrap();
+        let email = Email::parse("test@example.com".into()).unwrap();
         let login_attempt_id = LoginAttemptId::default();
-        let code: TwoFACode = "123456".parse().unwrap();
+        let code = TwoFACode::parse("123456".into()).unwrap();
 
         store
             .add_code(email.clone(), login_attempt_id.clone(), code.clone())
@@ -64,13 +67,13 @@ mod tests {
     async fn test_add_multiple_distinct_emails() {
         let store = DashMapTwoFACodeStore::default();
 
-        let email1: Email = "test1@example.com".parse().unwrap();
+        let email1 = Email::parse("test1@example.com".into()).unwrap();
         let login_id1 = LoginAttemptId::default();
-        let code1: TwoFACode = "123456".parse().unwrap();
+        let code1 = TwoFACode::parse("123456".into()).unwrap();
 
-        let email2: Email = "test2@example.com".parse().unwrap();
+        let email2 = Email::parse("test2@example.com".into()).unwrap();
         let login_id2 = LoginAttemptId::default();
-        let code2: TwoFACode = "654321".parse().unwrap();
+        let code2 = TwoFACode::parse("654321".into()).unwrap();
 
         store
             .add_code(email1.clone(), login_id1.clone(), code1.clone())
@@ -89,12 +92,12 @@ mod tests {
     async fn test_add_code_overwrites_existing() {
         let store = DashMapTwoFACodeStore::default();
 
-        let email: Email = "test@example.com".parse().unwrap();
+        let email = Email::parse("test@example.com".into()).unwrap();
         let login_id1 = LoginAttemptId::default();
-        let code1: TwoFACode = "123456".parse().unwrap();
+        let code1 = TwoFACode::parse("123456".into()).unwrap();
 
         let login_id2 = LoginAttemptId::default();
-        let code2: TwoFACode = "654321".parse().unwrap();
+        let code2 = TwoFACode::parse("654321".into()).unwrap();
 
         store
             .add_code(email.clone(), login_id1.clone(), code1.clone())
@@ -113,9 +116,9 @@ mod tests {
     async fn test_remove_existing() {
         let store = DashMapTwoFACodeStore::default();
 
-        let email: Email = "test@example.com".parse().unwrap();
+        let email = Email::parse("test@example.com".into()).unwrap();
         let login_attempt_id = LoginAttemptId::default();
-        let code: TwoFACode = "123456".parse().unwrap();
+        let code = TwoFACode::parse("123456".into()).unwrap();
 
         store
             .add_code(email.clone(), login_attempt_id.clone(), code.clone())
@@ -133,19 +136,22 @@ mod tests {
     async fn test_remove_nonexistent() {
         let store = DashMapTwoFACodeStore::default();
 
-        let email: Email = "test@example.com".parse().unwrap();
+        let email = Email::parse("test@example.com".into()).unwrap();
 
         let result = store.remove_code(&email).await;
-        assert_eq!(result.unwrap_err(), TwoFACodeStoreError::UnexpectedError);
+        assert_eq!(
+            result.unwrap_err(),
+            TwoFACodeStoreError::UnexpectedError(eyre!("test"))
+        );
     }
 
     #[tokio::test]
     async fn test_remove_twice() {
         let store = DashMapTwoFACodeStore::default();
 
-        let email: Email = "test@example.com".parse().unwrap();
+        let email = Email::parse("test@example.com".into()).unwrap();
         let login_attempt_id = LoginAttemptId::default();
-        let code: TwoFACode = "123456".parse().unwrap();
+        let code = TwoFACode::parse("123456".into()).unwrap();
 
         store
             .add_code(email.clone(), login_attempt_id.clone(), code.clone())
@@ -159,6 +165,9 @@ mod tests {
         );
 
         let result = store.remove_code(&email).await;
-        assert_eq!(result.unwrap_err(), TwoFACodeStoreError::UnexpectedError);
+        assert_eq!(
+            result.unwrap_err(),
+            TwoFACodeStoreError::UnexpectedError(eyre!("test"))
+        );
     }
 }

@@ -1,28 +1,27 @@
 use std::str::FromStr;
 
+use secrecy::{ExposeSecret, SecretString};
 use validator::{Validate, ValidationError, ValidationErrors};
 
 use crate::domain::AuthAPIError;
 
-#[derive(Clone, Debug, PartialEq)]
-pub struct TwoFACode(String);
+#[derive(Clone, Debug)]
+pub struct TwoFACode(SecretString);
 
-impl FromStr for TwoFACode {
-    type Err = AuthAPIError;
+impl TwoFACode {
+    pub fn parse(s: SecretString) -> Result<Self, AuthAPIError> {
+        let attempt = TwoFACode(s);
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let parsed = TwoFACode(s.to_string());
-
-        parsed
+        attempt
             .validate()
             .map_err(|_| AuthAPIError::Invalid2FACode)?;
-        Ok(parsed)
+        Ok(attempt)
     }
 }
 
 impl Validate for TwoFACode {
     fn validate(&self) -> Result<(), validator::ValidationErrors> {
-        let code = &self.0;
+        let code = &self.0.expose_secret();
 
         if code.len() != 6 || u32::from_str(code).is_err() {
             let mut errors = ValidationErrors::new();
@@ -40,14 +39,20 @@ impl Validate for TwoFACode {
 
 impl AsRef<str> for TwoFACode {
     fn as_ref(&self) -> &str {
-        &self.0
+        &self.0.expose_secret()
+    }
+}
+
+impl PartialEq for TwoFACode {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.expose_secret() == other.0.expose_secret()
     }
 }
 
 impl Default for TwoFACode {
     fn default() -> Self {
         let val = rand::random_range(0..1_000_000);
-        Self(format!("{:06}", val))
+        Self(format!("{:06}", val).into())
     }
 }
 

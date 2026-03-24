@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use tracing::debug;
 
 use crate::domain::{AuthAPIError, Email, EmailClient};
 
@@ -12,11 +13,11 @@ impl EmailClient for MockEmailClient {
         subject: &str,
         contents: &str,
     ) -> Result<(), AuthAPIError> {
-        println!("[Notification]: Email sent!");
-        println!("[Sender]: You (someone@somewhere.com)");
-        println!("[Recipient]: {}", recipient.as_ref());
-        println!("[Subject]: {}", subject);
-        println!("[Contents]: {}", contents);
+        debug!("[Notification]: Email sent!");
+        debug!("[Sender]: You (someone@somewhere.com)");
+        debug!("[Recipient]: {}", recipient.as_ref());
+        debug!("[Subject]: {}", subject);
+        debug!("[Contents]: {}", contents);
         Ok(())
     }
 }

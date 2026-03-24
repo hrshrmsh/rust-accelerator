@@ -1,41 +1,49 @@
-use std::str::FromStr;
+use std::hash::Hash;
 
-use serde::{Deserialize, Serialize};
-use validator::{Validate, ValidateEmail, ValidationError, ValidationErrors};
+use color_eyre::{Result, eyre::eyre};
+use secrecy::{ExposeSecret, SecretString};
+use validator::{ValidateEmail, ValidationError, ValidationErrors};
 
-use crate::domain::AuthAPIError;
+#[derive(Clone, Debug)]
+pub struct Email(SecretString);
 
-#[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Email(String);
-
-impl FromStr for Email {
-    type Err = AuthAPIError;
-
-    fn from_str(email: &str) -> Result<Self, AuthAPIError> {
-        let parsed = Email(email.to_string());
-
-        parsed
-            .validate()
-            .map_err(|_| AuthAPIError::InvalidCredentials)?;
-        Ok(parsed)
+impl PartialEq for Email {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.expose_secret() == other.0.expose_secret()
     }
 }
 
-impl Validate for Email {
-    fn validate(&self) -> Result<(), ValidationErrors> {
-        ValidateEmail::validate_email(&self.0)
-            .then_some(())
-            .ok_or_else(|| {
-                let mut errs = ValidationErrors::new();
-                errs.add("email", ValidationError::new("invalid email"));
-                errs
-            })
+impl Hash for Email {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.0.expose_secret().hash(state);
     }
+}
+
+impl Eq for Email {}
+
+impl Email {
+    pub fn parse(s: SecretString) -> Result<Email> {
+        if validate_email(&s).is_ok() {
+            Ok(Self(s))
+        } else {
+            Err(eyre!(format!("{} is not a valid email", s.expose_secret())))
+        }
+    }
+}
+
+fn validate_email(email: &SecretString) -> Result<(), ValidationErrors> {
+    ValidateEmail::validate_email(&email.expose_secret())
+        .then_some(())
+        .ok_or_else(|| {
+            let mut errs = ValidationErrors::new();
+            errs.add("email", ValidationError::new("invalid email"));
+            errs
+        })
 }
 
 impl AsRef<str> for Email {
     fn as_ref(&self) -> &str {
-        &self.0
+        &self.0.expose_secret()
     }
 }
 
@@ -62,7 +70,7 @@ mod tests {
 
     #[quickcheck]
     fn valid_emails_parsed_successfully(email: ValidArbitraryEmail) -> bool {
-        email.0.parse::<Email>().is_ok()
+        Email::parse(email.0.into()).is_ok()
     }
 
     // negative variant (invalid emails) omitted

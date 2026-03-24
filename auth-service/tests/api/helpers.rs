@@ -1,6 +1,7 @@
 use auth_service::get_redis_client;
 use auth_service::services::{RedisBannedTokenStore, RedisTwoFACodeStore};
 use auth_service::utils::constants::REDIS_HOST_NAME;
+use secrecy::ExposeSecret;
 use sqlx::Connection;
 use std::str::FromStr;
 use std::{fmt::Debug, sync::Arc};
@@ -177,7 +178,7 @@ impl Drop for TestApp {
 }
 
 async fn configure_postgresql() -> (String, PgPool) {
-    let postgresql_conn_url = DATABASE_URL.to_owned();
+    let postgresql_conn_url = DATABASE_URL.expose_secret();
     let db_name = Uuid::new_v4().to_string();
 
     configure_database(&postgresql_conn_url, &db_name).await;
@@ -186,7 +187,7 @@ async fn configure_postgresql() -> (String, PgPool) {
 
     (
         db_name,
-        get_postgres_pool(&postgresql_conn_url_with_db)
+        get_postgres_pool(&postgresql_conn_url_with_db.into())
             .await
             .expect("Failed to create Postgres connection pool!"),
     )
@@ -217,7 +218,7 @@ async fn configure_database(db_conn_string: &str, db_name: &str) {
 }
 
 async fn delete_database(db_name: &str) {
-    let postgresql_conn_url: String = DATABASE_URL.to_owned();
+    let postgresql_conn_url: String = DATABASE_URL.expose_secret().to_owned();
 
     let connection_options = PgConnectOptions::from_str(&postgresql_conn_url)
         .expect("Failed to parse PostgreSQL connection string");
@@ -246,7 +247,7 @@ async fn delete_database(db_name: &str) {
 }
 
 async fn configure_redis() -> redis::aio::MultiplexedConnection {
-    get_redis_client(REDIS_HOST_NAME.to_string())
+    get_redis_client(&REDIS_HOST_NAME)
         .expect("failed to get redis client")
         .get_multiplexed_async_connection()
         .await

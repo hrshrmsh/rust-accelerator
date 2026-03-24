@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use secrecy::SecretString;
 use sqlx::{PgPool, query};
 use tracing::instrument;
 
@@ -30,7 +31,7 @@ impl UserStore for PostgresUserStore {
             sqlx::Error::Database(ref db_err) if db_err.is_unique_violation() => {
                 UserStoreError::UserAlreadyExists
             }
-            _ => UserStoreError::UnexpectedError,
+            _ => UserStoreError::UnexpectedError(e.into()),
         })?;
 
         Ok(())
@@ -44,16 +45,14 @@ impl UserStore for PostgresUserStore {
         )
         .fetch_optional(&self.pool)
         .await
-        .map_err(|_| UserStoreError::UnexpectedError)?;
+        .map_err(|e| UserStoreError::UnexpectedError(e.into()))?;
 
         match row {
             Some(data) => {
-                let email = data
-                    .email
-                    .parse()
-                    .map_err(|_| UserStoreError::UnexpectedError)?;
-                let password = HashedPassword::parse_password_hash(data.password_hash)
-                    .map_err(|_| UserStoreError::UnexpectedError)?;
+                let email = Email::parse(data.email.into())
+                    .map_err(|e| UserStoreError::UnexpectedError(e.into()))?;
+                let password = HashedPassword::parse_password_hash(data.password_hash.into())
+                    .map_err(|e| UserStoreError::UnexpectedError(e.into()))?;
 
                 Ok(User {
                     email,
@@ -66,10 +65,14 @@ impl UserStore for PostgresUserStore {
     }
 
     #[instrument(name = "Validating user credentials in PostgreSQL", skip_all)]
-    async fn validate_user(&self, email: &Email, password: &str) -> Result<(), UserStoreError> {
+    async fn validate_user(
+        &self,
+        email: &Email,
+        password: &SecretString,
+    ) -> Result<(), UserStoreError> {
         let user = self.get_user(email).await?;
         user.password
-            .verify_raw_password(password)
+            .verify_raw_password(password.clone())
             .await
             .map_err(|_| UserStoreError::InvalidCredentials)
     }

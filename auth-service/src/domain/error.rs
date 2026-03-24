@@ -3,7 +3,8 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
-use serde::{Deserialize, Serialize};
+use color_eyre::Report;
+use std::fmt::Write;
 use thiserror::Error;
 
 use crate::{
@@ -12,14 +13,12 @@ use crate::{
     utils::auth::GenerateTokenError,
 };
 
-#[derive(Error, Debug, Serialize, Deserialize)]
+#[derive(Error, Debug)]
 pub enum AuthAPIError {
     #[error("User already exists!")]
     UserAlreadyExists,
     #[error("Invalid credentials!")]
     InvalidCredentials,
-    #[error("Unexpected error!")]
-    UnexpectedError,
     #[error("Authentication failed!")]
     AuthenticationError,
     #[error("Missing Token!")]
@@ -30,10 +29,14 @@ pub enum AuthAPIError {
     Invalid2FACode,
     #[error("Invalid login attempt id!")]
     InvalidLoginAttemptId,
+    #[error("Unexpected error!")]
+    UnexpectedError(#[source] Report),
 }
 
 impl IntoResponse for AuthAPIError {
     fn into_response(self) -> Response {
+        log_error_chain(&self);
+
         let status = match self {
             Self::UserAlreadyExists => StatusCode::CONFLICT,
             Self::InvalidCredentials
@@ -41,13 +44,28 @@ impl IntoResponse for AuthAPIError {
             | Self::Invalid2FACode
             | Self::InvalidLoginAttemptId => StatusCode::BAD_REQUEST,
             Self::AuthenticationError | Self::InvalidToken => StatusCode::UNAUTHORIZED,
-            Self::UnexpectedError => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::UnexpectedError(_) => StatusCode::INTERNAL_SERVER_ERROR,
         };
         let body = Json(ErrorResponse {
             error: self.to_string(),
         });
         (status, body).into_response()
     }
+}
+
+fn log_error_chain(e: &(dyn std::error::Error + 'static)) {
+    let separator =
+        "\n-----------------------------------------------------------------------------------\n";
+    let mut report = format!("{}{:?}\n", separator, e);
+    let mut current = e.source();
+    while let Some(cause) = current {
+        let str = format!("Caused by:\n\n{:?}", cause);
+        // str writes only fail due to OOM - out of scope to handle
+        write!(report, "\n{}", str).unwrap();
+        current = cause.source();
+    }
+    write!(report, "\n{}", separator).unwrap();
+    tracing::error!("{}", report);
 }
 
 impl From<UserStoreError> for AuthAPIError {
@@ -57,7 +75,7 @@ impl From<UserStoreError> for AuthAPIError {
             UserStoreError::InvalidCredentials | UserStoreError::UserNotFound => {
                 Self::AuthenticationError
             }
-            _ => Self::UnexpectedError,
+            UserStoreError::UnexpectedError(e) => Self::UnexpectedError(e),
         }
     }
 }
@@ -65,9 +83,10 @@ impl From<UserStoreError> for AuthAPIError {
 impl From<GenerateTokenError> for AuthAPIError {
     fn from(value: GenerateTokenError) -> Self {
         match value {
-            GenerateTokenError::TokenError(_) => Self::InvalidToken,
-            GenerateTokenError::UnexpectedError => Self::UnexpectedError,
-            GenerateTokenError::BannedToken => Self::InvalidToken,
+            GenerateTokenError::UnexpectedError(e) => Self::UnexpectedError(e),
+            GenerateTokenError::TokenError(_) | GenerateTokenError::BannedToken => {
+                Self::InvalidToken
+            }
         }
     }
 }
@@ -76,7 +95,7 @@ impl From<TokenStoreError> for AuthAPIError {
     fn from(value: TokenStoreError) -> Self {
         match value {
             TokenStoreError::MissingToken => Self::MissingToken,
-            TokenStoreError::UnexpectedError => Self::UnexpectedError,
+            TokenStoreError::UnexpectedError(e) => Self::UnexpectedError(e),
         }
     }
 }
@@ -85,7 +104,13 @@ impl From<TwoFACodeStoreError> for AuthAPIError {
     fn from(value: TwoFACodeStoreError) -> Self {
         match value {
             TwoFACodeStoreError::LoginAttemptIdNotFound => Self::InvalidLoginAttemptId,
-            TwoFACodeStoreError::UnexpectedError => Self::UnexpectedError,
+            TwoFACodeStoreError::UnexpectedError(e) => Self::UnexpectedError(e),
         }
+    }
+}
+
+impl From<Report> for AuthAPIError {
+    fn from(value: Report) -> Self {
+        Self::UnexpectedError(value.wrap_err("Unexpected error!"))
     }
 }
