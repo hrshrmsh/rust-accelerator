@@ -8,14 +8,28 @@ pub mod env {
     pub const DROPLET_IP_ENV_VAR: &str = "DROPLET_IP";
     pub const DATABASE_URL_ENV_VAR: &str = "DATABASE_URL";
     pub const REDIS_HOST_NAME_ENV_VAR: &str = "REDIS_HOSTNAME";
+    pub const POSTMARK_AUTH_TOKEN_ENV_VAR: &str = "POSTMARK_AUTH_TOKEN";
 }
 
 pub mod prod {
     pub const APP_ADDRESS: &str = "0.0.0.0:3000";
+    pub mod email_client {
+        use std::time::Duration;
+
+        pub const BASE_URL: &str = "https://api.postmarkapp.com/email";
+        pub const SENDER: &str = "bogdan@codeiron.io";
+        pub const TIMEOUT: Duration = std::time::Duration::from_secs(10);
+    }
 }
 
 pub mod test {
     pub const APP_ADDRESS: &str = "127.0.0.1:0";
+    pub mod email_client {
+        use std::time::Duration;
+
+        pub const SENDER: &str = "test@email.com";
+        pub const TIMEOUT: Duration = std::time::Duration::from_millis(200);
+    }
 }
 
 pub const JWT_COOKIE_NAME: &str = "jwt";
@@ -55,4 +69,14 @@ pub static REDIS_HOST_NAME: LazyLock<SecretString> = LazyLock::new(|| {
     std::env::var(env::REDIS_HOST_NAME_ENV_VAR)
         .unwrap_or(DEFAULT_REDIS_HOSTNAME.to_string())
         .into()
+});
+
+pub static POSTMARK_AUTH_TOKEN: LazyLock<SecretString> = LazyLock::new(|| {
+    dotenv().ok();
+    let token =
+        std::env::var(env::POSTMARK_AUTH_TOKEN_ENV_VAR).expect("POSTMARK_AUTH_TOKEN must be set!");
+    if token.is_empty() {
+        panic!("POSTMARK_AUTH_TOKEN must not be empty!");
+    }
+    token.into()
 });

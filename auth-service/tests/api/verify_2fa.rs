@@ -4,6 +4,8 @@ use auth_service::routes::LoginResponse;
 use auth_service::utils::constants::JWT_COOKIE_NAME;
 use serde_json::json;
 use test_context::test_context;
+use wiremock::matchers::{method, path};
+use wiremock::{Mock, ResponseTemplate};
 
 #[test_context(TestApp)]
 #[tokio::test]
@@ -35,6 +37,13 @@ async fn should_return_200_if_correct_code(app: &mut TestApp) {
             .find(|cookie| cookie.name() == JWT_COOKIE_NAME)
             .is_none()
     );
+
+    Mock::given(path("/email"))
+        .and(method("POST"))
+        .respond_with(ResponseTemplate::new(200))
+        .expect(1)
+        .mount(&app.email_server)
+        .await;
 
     let login: LoginResponse = login_response.json().await.unwrap();
 
@@ -165,6 +174,13 @@ async fn should_return_401_if_incorrect_credentials(app: &mut TestApp) {
         .error_for_status()
         .unwrap();
 
+    Mock::given(path("/email"))
+        .and(method("POST"))
+        .respond_with(ResponseTemplate::new(200))
+        .expect(1)
+        .mount(&app.email_server)
+        .await;
+
     let login: LoginResponse = login_response.json().await.unwrap();
 
     // can't pick a random #, so this is a work around
@@ -220,6 +236,13 @@ async fn should_return_401_if_old_code(app: &mut TestApp) {
     let login_response: LoginResponse = app.post_login(&login_body).await.json().await.unwrap();
     app.post_login(&login_body).await;
 
+    Mock::given(path("/email"))
+        .and(method("POST"))
+        .respond_with(ResponseTemplate::new(200))
+        .expect(2)
+        .mount(&app.email_server)
+        .await;
+
     let verify_response = app
         .post_verify_2fa(&json!({
             "email": &email,
@@ -259,6 +282,13 @@ async fn should_return_401_if_same_code_twice(app: &mut TestApp) {
         .await
         .error_for_status()
         .unwrap();
+
+    Mock::given(path("/email"))
+        .and(method("POST"))
+        .respond_with(ResponseTemplate::new(200))
+        .expect(1)
+        .mount(&app.email_server)
+        .await;
 
     let login: LoginResponse = login_response.json().await.unwrap();
 

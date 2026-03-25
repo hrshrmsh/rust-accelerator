@@ -1,18 +1,21 @@
+use auth_service::domain::Email;
 use auth_service::get_redis_client;
-use auth_service::services::{RedisBannedTokenStore, RedisTwoFACodeStore};
+use auth_service::services::{PostmarkEmailClient, RedisBannedTokenStore, RedisTwoFACodeStore};
 use auth_service::utils::constants::REDIS_HOST_NAME;
-use secrecy::ExposeSecret;
+use reqwest::Client;
+use secrecy::{ExposeSecret, SecretString};
 use sqlx::Connection;
 use std::str::FromStr;
 use std::{fmt::Debug, sync::Arc};
 use test_context::AsyncTestContext;
 use tokio::sync::RwLock;
+use wiremock::MockServer;
 
 use auth_service::{
     Application,
     app_state::AppState,
     get_postgres_pool,
-    services::{MockEmailClient, PostgresUserStore},
+    services::PostgresUserStore,
     utils::constants::{DATABASE_URL, test},
 };
 
@@ -30,6 +33,7 @@ pub struct TestApp {
     pub http_client: reqwest::Client,
     pub banned_token_store: Arc<RedisBannedTokenStore>,
     pub two_fa_code_store: Arc<RedisTwoFACodeStore>,
+    pub email_server: MockServer,
     pub ready_to_drop: bool,
 }
 
@@ -37,11 +41,13 @@ impl TestApp {
     pub async fn new() -> Self {
         let (db_name, pg_pool) = configure_postgresql().await;
         let redis_connection = Arc::new(RwLock::new(configure_redis().await));
+        let email_server = MockServer::start().await;
 
         let user_store = Arc::new(PostgresUserStore::new(pg_pool));
         let banned_token_store = Arc::new(RedisBannedTokenStore::new(redis_connection.clone()));
         let two_fa_code_store = Arc::new(RedisTwoFACodeStore::new(redis_connection));
-        let email_client = Arc::new(MockEmailClient);
+        let base_url = email_server.uri();
+        let email_client = Arc::new(configure_postmark_email_client(base_url));
 
         let app_state = AppState {
             user_store: user_store.clone(),
@@ -69,6 +75,7 @@ impl TestApp {
             db_name,
             cookie_jar,
             http_client,
+            email_server,
             banned_token_store,
             two_fa_code_store,
             ready_to_drop: false,
@@ -252,4 +259,20 @@ async fn configure_redis() -> redis::aio::MultiplexedConnection {
         .get_multiplexed_async_connection()
         .await
         .expect("failed to get redis connection")
+}
+
+fn configure_postmark_email_client(base_url: String) -> PostmarkEmailClient {
+    let postmark_auth_token: SecretString = "auth_token".into();
+
+    let sender = Email::parse(SecretString::new(
+        test::email_client::SENDER.to_owned().into_boxed_str(),
+    ))
+    .unwrap();
+
+    let http_client = Client::builder()
+        .timeout(test::email_client::TIMEOUT)
+        .build()
+        .expect("Failed to build HTTP client");
+
+    PostmarkEmailClient::new(http_client, base_url.into(), sender, postmark_auth_token)
 }

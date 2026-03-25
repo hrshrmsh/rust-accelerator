@@ -7,6 +7,10 @@ use auth_service::{
     utils::constants::JWT_COOKIE_NAME,
 };
 use test_context::test_context;
+use wiremock::{
+    Mock, ResponseTemplate,
+    matchers::{method, path},
+};
 
 use crate::helpers::TestApp;
 
@@ -44,6 +48,13 @@ async fn should_return_206_if_valid_credentials_and_2fa_enabled(app: &mut TestAp
         }))
         .await;
     assert_eq!(response.status().as_u16(), 206);
+
+    Mock::given(path("/email"))
+        .and(method("POST"))
+        .respond_with(ResponseTemplate::new(200))
+        .expect(1)
+        .mount(&app.email_server)
+        .await;
 
     let code = app
         .two_fa_code_store
